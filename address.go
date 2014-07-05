@@ -9,6 +9,8 @@ import (
 	"encoding/hex"
 	"errors"
 
+	"github.com/jbenet/btcutil/base58"
+
 	"code.google.com/p/go.crypto/ripemd160"
 	"github.com/conformal/btcec"
 	"github.com/conformal/btcnet"
@@ -47,7 +49,7 @@ func encodeAddress(hash160 []byte, netID byte) string {
 	b = append(b, hash160...)
 	cksum := btcwire.DoubleSha256(b)[:4]
 	b = append(b, cksum...)
-	return Base58Encode(b)
+	return base58.Base58Encode(b)
 }
 
 // Address is an interface type for any type of destination a transaction
@@ -98,7 +100,7 @@ func DecodeAddress(addr string, defaultNet *btcnet.Params) (Address, error) {
 	}
 
 	// Switch on decoded length to determine the type.
-	decoded := Base58Decode(addr)
+	decoded := base58.Base58Decode(addr)
 	switch len(decoded) {
 	case 1 + ripemd160.Size + 4: // P2PKH or P2SH
 		// Verify hash checksum.  Checksum is calculated as the first

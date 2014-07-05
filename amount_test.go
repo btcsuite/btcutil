@@ -2,13 +2,11 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package btcutil_test
+package btcutil
 
 import (
 	"math"
 	"testing"
-
-	. "github.com/conformal/btcutil"
 )
 
 func TestAmountCreation(t *testing.T) {

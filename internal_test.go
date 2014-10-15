@@ -12,6 +12,8 @@ interface. The functions are only exported while the tests are being run.
 package btcutil
 
 import (
+	"github.com/jbenet/btcutil/base58"
+
 	"code.google.com/p/go.crypto/ripemd160"
 	"github.com/conformal/btcec"
 )
@@ -67,6 +69,6 @@ func TstAddressPubKey(serializedPubKey []byte, pubKeyFormat PubKeyFormat,
 // TstAddressSAddr returns the expected script address bytes for
 // P2PKH and P2SH bitcoin addresses.
 func TstAddressSAddr(addr string) []byte {
-	decoded := Base58Decode(addr)
+	decoded := base58.Base58Decode(addr)
 	return decoded[1 : 1+ripemd160.Size]
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-package btcutil
+package base58
 
 import (
 	"math/big"
@@ -10,13 +10,24 @@ import (
 )
 
 // alphabet is the modified base58 alphabet used by Bitcoin.
-const alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+const BTCAlphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+const FlickrAlphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
 
 var bigRadix = big.NewInt(58)
 var bigZero = big.NewInt(0)
 
-// Base58Decode decodes a modified base58 string to a byte slice.
+// Base58Decode decodes a modified base58 string to a byte slice, using BTCAlphabet
 func Base58Decode(b string) []byte {
+	return Base58DecodeAlphabet(b, BTCAlphabet)
+}
+
+// Base58Encode encodes a byte slice to a modified base58 string, using BTCAlphabet
+func Base58Encode(b []byte) string {
+	return Base58EncodeAlphabet(b, BTCAlphabet)
+}
+
+// Base58DecodeAlphabet decodes a modified base58 string to a byte slice, using alphabet.
+func Base58DecodeAlphabet(b, alphabet string) []byte {
 	answer := big.NewInt(0)
 	j := big.NewInt(1)
 
@@ -48,8 +59,8 @@ func Base58Decode(b string) []byte {
 	return val
 }
 
-// Base58Encode encodes a byte slice to a modified base58 string.
-func Base58Encode(b []byte) string {
+// Base58Encode encodes a byte slice to a modified base58 string, using alphabet
+func Base58EncodeAlphabet(b []byte, alphabet string) string {
 	x := new(big.Int)
 	x.SetBytes(b)
 

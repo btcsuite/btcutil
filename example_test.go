@@ -74,3 +74,18 @@ func ExampleAmount_unitConversions() {
 	// Satoshi to MicroBTC: 444333222111 μBTC
 	// Satoshi to Satoshi: 44433322211100 Satoshi
 }
+
+func ExampleAmount_Format() {
+	// create monetary amount counted in bitcoin base units
+	amount := btcutil.Amount(44433322211100)
+
+	// format amount as string
+	fmt.Println(amount.Format(btcutil.AmountBTC))
+	fmt.Println(amount.Format(btcutil.AmountMilliBTC))
+	fmt.Println(amount.Format(btcutil.AmountSatoshi))
+
+	// Output:
+	// 444333.222111 BTC
+	// 444333222.111 mBTC
+	// 44433322211100 Satoshi
+}

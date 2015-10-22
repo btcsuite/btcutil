@@ -15,19 +15,18 @@ import (
 // which has been sorted and may have a different txid.
 func TxSort(tx *wire.MsgTx) *wire.MsgTx {
 	txCopy := tx.Copy()
-	sortInputs(txCopy.TxIn)
-	sortOutputs(txCopy.TxOut)
+	sort.Sort(sortableInputSlice(tx.TxIn))
+	sort.Sort(sortableOutputSlice(tx.TxOut))
 	return txCopy
 }
 
 // TxIsSorted checks whether tx has inputs and outputs sorted according
 // to BIP LI01.
 func TxIsSorted(tx *wire.MsgTx) bool {
-
-	if !checkSortInputs(tx.TxIn) {
+	if !sort.IsSorted(sortableInputSlice(tx.TxIn)) {
 		return false
 	}
-	if !checkSortOutpus(tx.TxOut) {
+	if !sort.IsSorted(sortableOutputSlice(tx.TxOut)) {
 		return false
 	}
 	return true
@@ -37,24 +36,6 @@ func TxIsSorted(tx *wire.MsgTx) bool {
 // (https://github.com/kristovatlas/rfc/blob/master/bips/bip-li01.mediawiki)
 type sortableInputSlice []*wire.TxIn
 type sortableOutputSlice []*wire.TxOut
-
-// when checking sorted status, use sort.IsSorted() to immediately return
-// false as soon as a sequence is detected as unsorted.
-func checkSortInputs(ins []*wire.TxIn) bool {
-	return sort.IsSorted(sortableInputSlice(ins))
-}
-func checkSortOutpus(outs []*wire.TxOut) bool {
-	return sort.IsSorted(sortableOutputSlice(outs))
-}
-
-func sortInputs(ins []*wire.TxIn) []*wire.TxIn {
-	sort.Sort(sortableInputSlice(ins))
-	return ins
-}
-func sortOutputs(outs []*wire.TxOut) []*wire.TxOut {
-	sort.Sort(sortableOutputSlice(outs))
-	return outs
-}
 
 // for SortableInputSlice and SortableOutputSlice, three functions are needed
 // to make it sortable with sort.Sort() -- Len, Less, and Swap

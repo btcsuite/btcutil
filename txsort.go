@@ -87,4 +87,3 @@ func (outs sortableOutputSlice) Less(i, j int) bool {
 	}
 	return outs[i].Value < outs[j].Value
 }
-

@@ -15,8 +15,8 @@ import (
 // which has been sorted and may have a different txid.
 func TxSort(tx *wire.MsgTx) *wire.MsgTx {
 	txCopy := tx.Copy()
-	sort.Sort(sortableInputSlice(tx.TxIn))
-	sort.Sort(sortableOutputSlice(tx.TxOut))
+	sort.Sort(sortableInputSlice(txCopy.TxIn))
+	sort.Sort(sortableOutputSlice(txCopy.TxOut))
 	return txCopy
 }
 

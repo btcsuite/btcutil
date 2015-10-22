@@ -52,8 +52,21 @@ func TestSortTx(t *testing.T) {
 
 	LI01Tx1SortedSha := LI01Tx1Sorted.TxSha()
 	if !wantSha.IsEqual(&LI01Tx1SortedSha) {
-		t.Errorf("Example tx 1 txid mismatch. Got %v, want %v",
+		t.Errorf("Sorted tx 1 txid mismatch. Got %v, want %v",
 			LI01Tx1SortedSha, wantSha)
+	}
+
+	// check that original transaction is not modified
+	wantShaStr = "0a6a357e2f7796444e02638749d9611c008b253fb55f5dc88b739b230ed0c4c3"
+	wantSha, err = wire.NewShaHashFromStr(wantShaStr)
+	if err != nil {
+		t.Errorf("NewShaHashFromStr: %v", err)
+	}
+
+	LI01Tx1Sha := LI01Tx1.TxSha()
+	if !wantSha.IsEqual(&LI01Tx1Sha) {
+		t.Errorf("Original tx 1 txid mismatch. Got %v, want %v",
+			LI01Tx1Sha, wantSha)
 	}
 
 	// test transaction 28204cad..., the second test case of BIPLI01

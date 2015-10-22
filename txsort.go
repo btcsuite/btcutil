@@ -23,18 +23,29 @@ func TxSort(tx *wire.MsgTx) *wire.MsgTx {
 // TxIsSorted checks whether tx has inputs and outputs sorted according
 // to BIP LI01.
 func TxIsSorted(tx *wire.MsgTx) bool {
-	txCopy := tx.Copy()
-	sortInputs(txCopy.TxIn)
-	sortOutputs(txCopy.TxOut)
-	inputTxid := tx.TxSha()
-	sortedTxid := txCopy.TxSha()
-	return inputTxid.IsEqual(&sortedTxid)
+
+	if !checkSortInputs(tx.TxIn) {
+		return false
+	}
+	if !checkSortOutpus(tx.TxOut) {
+		return false
+	}
+	return true
 }
 
 // Transaction input and output sorting, based on BIP LI01
 // (https://github.com/kristovatlas/rfc/blob/master/bips/bip-li01.mediawiki)
 type sortableInputSlice []*wire.TxIn
 type sortableOutputSlice []*wire.TxOut
+
+// when checking sorted status, use sort.IsSorted() to immediately return
+// false as soon as a sequence is detected as unsorted.
+func checkSortInputs(ins []*wire.TxIn) bool {
+	return sort.IsSorted(sortableInputSlice(ins))
+}
+func checkSortOutpus(outs []*wire.TxOut) bool {
+	return sort.IsSorted(sortableOutputSlice(outs))
+}
 
 func sortInputs(ins []*wire.TxIn) []*wire.TxIn {
 	sort.Sort(sortableInputSlice(ins))

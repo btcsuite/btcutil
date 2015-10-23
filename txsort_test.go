@@ -182,7 +182,7 @@ func TestSortTx(t *testing.T) {
 
 	LI01Tx5Sorted := btcutil.TxSort(&LI01Tx5)
 
-	// txid of 8131ffb0... changes to 0a8c246... when sorted
+	// txid of ff85e8f... changes to 9a6c247... when sorted
 	wantShaStr = "9a6c24746de024f77cac9b2138694f11101d1c66289261224ca52a25155a7c94"
 	wantSha, err = wire.NewShaHashFromStr(wantShaStr)
 	if err != nil {

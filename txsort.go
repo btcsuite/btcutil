@@ -2,9 +2,6 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-// TxSort
-// Provides functions for sorting tx inputs and outputs according to BIP LI01
-// (https://github.com/kristovatlas/rfc/blob/master/bips/bip-li01.mediawiki)
 package btcutil
 
 import (
@@ -13,6 +10,10 @@ import (
 
 	"github.com/btcsuite/btcd/wire"
 )
+
+// TxSort
+// Provides functions for sorting tx inputs and outputs according to BIP LI01
+// (https://github.com/kristovatlas/rfc/blob/master/bips/bip-li01.mediawiki)
 
 // TxSort sorts the inputs and outputs of a tx based on BIP LI01
 // It does not modify the transaction given, but returns a new copy

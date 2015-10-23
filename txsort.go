@@ -1,6 +1,10 @@
+// Copyright (c) 2013-2015 The btcsuite developers
+// Use of this source code is governed by an ISC
+// license that can be found in the LICENSE file.
+
 // TxSort
 // Provides functions for sorting tx inputs and outputs according to BIP LI01
-
+// (https://github.com/kristovatlas/rfc/blob/master/bips/bip-li01.mediawiki)
 package btcutil
 
 import (
@@ -32,8 +36,6 @@ func TxIsSorted(tx *wire.MsgTx) bool {
 	return true
 }
 
-// Transaction input and output sorting, based on BIP LI01
-// (https://github.com/kristovatlas/rfc/blob/master/bips/bip-li01.mediawiki)
 type sortableInputSlice []*wire.TxIn
 type sortableOutputSlice []*wire.TxOut
 

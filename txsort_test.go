@@ -164,6 +164,36 @@ func TestSortTx(t *testing.T) {
 		t.Errorf("Example tx 4 txid mismatch. Got %v, want %v",
 			LI01Tx4SortedSha, wantSha)
 	}
+
+	// Example 5 ff85e8fc92e71bbc217e3ea9a3bacb86b435e52b6df0b089d67302c293a2b81d
+	LI01Tx5bytes, err := hex.DecodeString(LI01Hex5)
+	if err != nil {
+		t.Errorf("Error in hardcoded hex")
+	}
+
+	var LI01Tx5 wire.MsgTx
+	err = LI01Tx5.Deserialize(bytes.NewReader(LI01Tx5bytes))
+	if err != nil {
+		t.Errorf("Failed to Deserialize LI01Tx5 from byte slice")
+	}
+	if btcutil.TxIsSorted(&LI01Tx5) {
+		t.Errorf("LI01 Test Transaction 5 seen as sorted, but isn't")
+	}
+
+	LI01Tx5Sorted := btcutil.TxSort(&LI01Tx5)
+
+	// txid of 8131ffb0... changes to 0a8c246... when sorted
+	wantShaStr = "9a6c24746de024f77cac9b2138694f11101d1c66289261224ca52a25155a7c94"
+	wantSha, err = wire.NewShaHashFromStr(wantShaStr)
+	if err != nil {
+		t.Errorf("NewShaHashFromStr: %v", err)
+	}
+
+	LI01Tx5SortedSha := LI01Tx5Sorted.TxSha()
+	if !wantSha.IsEqual(&LI01Tx5SortedSha) {
+		t.Errorf("Example tx 5 txid mismatch. Got %v, want %v",
+			LI01Tx5SortedSha, wantSha)
+	}
 }
 
 // Example 1 sorts inputs, but leaves outputs unchanged
@@ -177,3 +207,6 @@ var LI01Hex3 = "0100000001d992e5a888a86d4c7a6a69167a4728ee69497509740fc5f456a245
 
 // Example 4 sorts both inputs and outputs.  Block 10001 tx[1]
 var LI01Hex4 = "01000000059daf0abe7a92618546a9dbcfd65869b6178c66ec21ccfda878c1175979cfd9ef000000004a493046022100c2f7f25be5de6ce88ac3c1a519514379e91f39b31ddff279a3db0b1a229b708b022100b29efbdbd9837cc6a6c7318aa4900ed7e4d65662c34d1622a2035a3a5534a99a01ffffffffd516330ebdf075948da56db13d22632a4fb941122df2884397dda45d451acefb0000000048473044022051243debe6d4f2b433bee0cee78c5c4073ead0e3bde54296dbed6176e128659c022044417bfe16f44eb7b6eb0cdf077b9ce972a332e15395c09ca5e4f602958d266101ffffffffe1f5aa33961227b3c344e57179417ce01b7ccd421117fe2336289b70489883f900000000484730440220593252bb992ce3c85baf28d6e3aa32065816271d2c822398fe7ee28a856bc943022066d429dd5025d3c86fd8fd8a58e183a844bd94aa312cefe00388f57c85b0ca3201ffffffffe207e83718129505e6a7484831442f668164ae659fddb82e9e5421a081fb90d50000000049483045022067cf27eb733e5bcae412a586b25a74417c237161a084167c2a0b439abfebdcb2022100efcc6baa6824b4c5205aa967e0b76d31abf89e738d4b6b014e788c9a8cccaf0c01ffffffffe23b8d9d80a9e9d977fab3c94dbe37befee63822443c3ec5ae5a713ede66c3940000000049483045022020f2eb35036666b1debe0d1d2e77a36d5d9c4e96c1dba23f5100f193dbf524790221008ce79bc1321fb4357c6daee818038d41544749127751726e46b2b320c8b565a201ffffffff0200ba1dd2050000001976a914366a27645806e817a6cd40bc869bdad92fe5509188ac40420f00000000001976a914ee8bd501094a7d5ca318da2506de35e1cb025ddc88ac00000000"
+
+// Example 5 Sorts outputs only, based on output script.  Block 100998 tx[6]
+var LI01Hex5 = "01000000011f636d0003f673b3aeea4971daef16b8eed784cf6e8019a5ae7da4985fbb06e5000000008a47304402205103941e2b11e746dfa817888d422f6e7f4d16dbbfb8ffa61d15ffb924a84b8802202fe861b0f23f17139d15a3374bfc6c7196d371f3d1a324e31cc0aadbba87e53c0141049e7e1b251a7e26cae9ee7553b278ef58ef3c28b4b20134d51b747d9b18b0a19b94b66cef320e2549dec0ea3d725cb4c742f368928b1fb74b4603e24a1e262c80ffffffff0240420f00000000001976a914bcfa0e27218a7c97257b351b03a9eac95c25a23988ac40420f00000000001976a9140c6a68f20bafc678164d171ee4f077adfa9b091688ac00000000"

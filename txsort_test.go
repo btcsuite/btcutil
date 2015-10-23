@@ -32,168 +32,157 @@ func TestSortTx(t *testing.T) {
 
 	// Example 1 0a6a357e2f7796444e02638749d9611c008b253fb55f5dc88b739b230ed0c4c3
 	// test transaction 0a6a357e... which is the first test case of BIPLI01
-	LI01Tx1bytes, err := hex.DecodeString(LI01Hex1)
+	li01Tx1bytes, err := hex.DecodeString(LI01Hex1)
 	if err != nil {
 		t.Errorf("Error in hardcoded hex")
 	}
 
-	var LI01Tx1 wire.MsgTx
-	err = LI01Tx1.Deserialize(bytes.NewReader(LI01Tx1bytes))
+	var li01Tx1 wire.MsgTx
+	err = li01Tx1.Deserialize(bytes.NewReader(li01Tx1bytes))
 	if err != nil {
-		t.Errorf("Failed to Deserialize LI01Tx from byte slice")
+		t.Errorf("Failed to Deserialize li01Tx from byte slice")
 	}
 
-	if btcutil.TxIsSorted(&LI01Tx1) {
+	if btcutil.TxIsSorted(&li01Tx1) {
 		t.Errorf("LI01 Test Transaction 1 seen as sorted, but isn't")
 	}
 
-	LI01Tx1Sorted := btcutil.TxSort(&LI01Tx1)
+	li01Tx1Sorted := btcutil.TxSort(&li01Tx1)
 	// txid of 0a6a357e... becomes 839503c... when sorted
-	wantShaStr := "839503cb611a3e3734bd521c608f881be2293ff77b7384057ab994c794fce623"
-	wantSha, err := wire.NewShaHashFromStr(wantShaStr)
-	if err != nil {
-		t.Errorf("NewShaHashFromStr: %v", err)
-	}
+	wantSha := newShaHashFromStr("839503cb611a3e3734bd521c608f881be2293ff77b7384057ab994c794fce623")
 
-	LI01Tx1SortedSha := LI01Tx1Sorted.TxSha()
-	if !wantSha.IsEqual(&LI01Tx1SortedSha) {
+	li01Tx1SortedSha := li01Tx1Sorted.TxSha()
+	if !wantSha.IsEqual(&li01Tx1SortedSha) {
 		t.Errorf("Sorted tx 1 txid mismatch. Got %v, want %v",
-			LI01Tx1SortedSha, wantSha)
+			li01Tx1SortedSha, wantSha)
 	}
 
 	// check that original transaction is not modified
-	wantShaStr = "0a6a357e2f7796444e02638749d9611c008b253fb55f5dc88b739b230ed0c4c3"
-	wantSha, err = wire.NewShaHashFromStr(wantShaStr)
-	if err != nil {
-		t.Errorf("NewShaHashFromStr: %v", err)
-	}
+	wantSha = newShaHashFromStr("0a6a357e2f7796444e02638749d9611c008b253fb55f5dc88b739b230ed0c4c3")
 
-	LI01Tx1Sha := LI01Tx1.TxSha()
-	if !wantSha.IsEqual(&LI01Tx1Sha) {
+	li01Tx1Sha := li01Tx1.TxSha()
+	if !wantSha.IsEqual(&li01Tx1Sha) {
 		t.Errorf("Original tx 1 txid mismatch. Got %v, want %v",
-			LI01Tx1Sha, wantSha)
+			li01Tx1Sha, wantSha)
 	}
 
 	// Example 2 28204cad1d7fc1d199e8ef4fa22f182de6258a3eaafe1bbe56ebdcacd3069a5f
 	// test transaction 28204cad..., the second test case of BIPLI01
-	LI01Tx2bytes, err := hex.DecodeString(LI01Hex2)
+	li01Tx2bytes, err := hex.DecodeString(LI01Hex2)
 	if err != nil {
 		t.Errorf("Error in hardcoded hex")
 	}
 
-	var LI01Tx2 wire.MsgTx
-	err = LI01Tx2.Deserialize(bytes.NewReader(LI01Tx2bytes))
+	var li01Tx2 wire.MsgTx
+	err = li01Tx2.Deserialize(bytes.NewReader(li01Tx2bytes))
 	if err != nil {
-		t.Errorf("Failed to Deserialize LI01Tx from byte slice")
+		t.Errorf("Failed to Deserialize li01Tx from byte slice")
 	}
-	if !btcutil.TxIsSorted(&LI01Tx2) {
+	if !btcutil.TxIsSorted(&li01Tx2) {
 		t.Errorf("LI01 Test Transaction 2 seen as unsorted, but it is sorted")
 	}
 
-	LI01Tx2Sorted := btcutil.TxSort(&LI01Tx2)
+	li01Tx2Sorted := btcutil.TxSort(&li01Tx2)
 
 	// txid of 28204cad... stays the same when sorted
-	wantShaStr = "28204cad1d7fc1d199e8ef4fa22f182de6258a3eaafe1bbe56ebdcacd3069a5f"
-	wantSha, err = wire.NewShaHashFromStr(wantShaStr)
-	if err != nil {
-		t.Errorf("NewShaHashFromStr: %v", err)
-	}
+	wantSha = newShaHashFromStr("28204cad1d7fc1d199e8ef4fa22f182de6258a3eaafe1bbe56ebdcacd3069a5f")
 
-	LI01Tx2SortedSha := LI01Tx2Sorted.TxSha()
-	if !wantSha.IsEqual(&LI01Tx2SortedSha) {
+	li01Tx2SortedSha := li01Tx2Sorted.TxSha()
+	if !wantSha.IsEqual(&li01Tx2SortedSha) {
 		t.Errorf("Example tx 2 txid mismatch. Got %v, want %v",
-			LI01Tx2SortedSha, wantSha)
+			li01Tx2SortedSha, wantSha)
 	}
 
 	// Example 3 8131ffb0a2c945ecaf9b9063e59558784f9c3a74741ce6ae2a18d0571dac15bb
-	LI01Tx3bytes, err := hex.DecodeString(LI01Hex3)
+	li01Tx3bytes, err := hex.DecodeString(LI01Hex3)
 	if err != nil {
 		t.Errorf("Error in hardcoded hex")
 	}
 
-	var LI01Tx3 wire.MsgTx
-	err = LI01Tx3.Deserialize(bytes.NewReader(LI01Tx3bytes))
+	var li01Tx3 wire.MsgTx
+	err = li01Tx3.Deserialize(bytes.NewReader(li01Tx3bytes))
 	if err != nil {
-		t.Errorf("Failed to Deserialize LI01Tx3 from byte slice")
+		t.Errorf("Failed to Deserialize li01Tx3 from byte slice")
 	}
-	if btcutil.TxIsSorted(&LI01Tx3) {
+	if btcutil.TxIsSorted(&li01Tx3) {
 		t.Errorf("LI01 Test Transaction 3 seen as sorted, but isn't")
 	}
 
-	LI01Tx3Sorted := btcutil.TxSort(&LI01Tx3)
+	li01Tx3Sorted := btcutil.TxSort(&li01Tx3)
 
 	// txid of 8131ffb0... changes to 0a8c246... when sorted
-	wantShaStr = "0a8c246c55f6b82f094d211f4f57167bf2ea4898741d218b09bdb2536fd8d13f"
-	wantSha, err = wire.NewShaHashFromStr(wantShaStr)
-	if err != nil {
-		t.Errorf("NewShaHashFromStr: %v", err)
-	}
+	wantSha = newShaHashFromStr("0a8c246c55f6b82f094d211f4f57167bf2ea4898741d218b09bdb2536fd8d13f")
 
-	LI01Tx3SortedSha := LI01Tx3Sorted.TxSha()
-	if !wantSha.IsEqual(&LI01Tx3SortedSha) {
+	li01Tx3SortedSha := li01Tx3Sorted.TxSha()
+	if !wantSha.IsEqual(&li01Tx3SortedSha) {
 		t.Errorf("Example tx 3 txid mismatch. Got %v, want %v",
-			LI01Tx3SortedSha, wantSha)
+			li01Tx3SortedSha, wantSha)
 	}
 
 	// Example 4 fbde5d03b027d2b9ba4cf5d4fecab9a99864df2637b25ea4cbcb1796ff6550ca
-	LI01Tx4bytes, err := hex.DecodeString(LI01Hex4)
+	li01Tx4bytes, err := hex.DecodeString(LI01Hex4)
 	if err != nil {
 		t.Errorf("Error in hardcoded hex")
 	}
 
-	var LI01Tx4 wire.MsgTx
-	err = LI01Tx4.Deserialize(bytes.NewReader(LI01Tx4bytes))
+	var li01Tx4 wire.MsgTx
+	err = li01Tx4.Deserialize(bytes.NewReader(li01Tx4bytes))
 	if err != nil {
-		t.Errorf("Failed to Deserialize LI01Tx4 from byte slice")
+		t.Errorf("Failed to Deserialize li01Tx4 from byte slice")
 	}
-	if btcutil.TxIsSorted(&LI01Tx4) {
+	if btcutil.TxIsSorted(&li01Tx4) {
 		t.Errorf("LI01 Test Transaction 4 seen as sorted, but isn't")
 	}
 
-	LI01Tx4Sorted := btcutil.TxSort(&LI01Tx4)
+	li01Tx4Sorted := btcutil.TxSort(&li01Tx4)
 
 	// txid of 8131ffb0... changes to 0a8c246... when sorted
-	wantShaStr = "a3196553b928b0b6154b002fa9a1ce875adabc486fedaaaf4c17430fd4486329"
-	wantSha, err = wire.NewShaHashFromStr(wantShaStr)
-	if err != nil {
-		t.Errorf("NewShaHashFromStr: %v", err)
-	}
+	wantSha = newShaHashFromStr("a3196553b928b0b6154b002fa9a1ce875adabc486fedaaaf4c17430fd4486329")
 
-	LI01Tx4SortedSha := LI01Tx4Sorted.TxSha()
-	if !wantSha.IsEqual(&LI01Tx4SortedSha) {
+	li01Tx4SortedSha := li01Tx4Sorted.TxSha()
+	if !wantSha.IsEqual(&li01Tx4SortedSha) {
 		t.Errorf("Example tx 4 txid mismatch. Got %v, want %v",
-			LI01Tx4SortedSha, wantSha)
+			li01Tx4SortedSha, wantSha)
 	}
 
 	// Example 5 ff85e8fc92e71bbc217e3ea9a3bacb86b435e52b6df0b089d67302c293a2b81d
-	LI01Tx5bytes, err := hex.DecodeString(LI01Hex5)
+	li01Tx5bytes, err := hex.DecodeString(LI01Hex5)
 	if err != nil {
 		t.Errorf("Error in hardcoded hex")
 	}
 
-	var LI01Tx5 wire.MsgTx
-	err = LI01Tx5.Deserialize(bytes.NewReader(LI01Tx5bytes))
+	var li01Tx5 wire.MsgTx
+	err = li01Tx5.Deserialize(bytes.NewReader(li01Tx5bytes))
 	if err != nil {
-		t.Errorf("Failed to Deserialize LI01Tx5 from byte slice")
+		t.Errorf("Failed to Deserialize li01Tx5 from byte slice")
 	}
-	if btcutil.TxIsSorted(&LI01Tx5) {
+	if btcutil.TxIsSorted(&li01Tx5) {
 		t.Errorf("LI01 Test Transaction 5 seen as sorted, but isn't")
 	}
 
-	LI01Tx5Sorted := btcutil.TxSort(&LI01Tx5)
+	li01Tx5Sorted := btcutil.TxSort(&li01Tx5)
 
 	// txid of ff85e8f... changes to 9a6c247... when sorted
-	wantShaStr = "9a6c24746de024f77cac9b2138694f11101d1c66289261224ca52a25155a7c94"
-	wantSha, err = wire.NewShaHashFromStr(wantShaStr)
-	if err != nil {
-		t.Errorf("NewShaHashFromStr: %v", err)
-	}
+	wantSha = newShaHashFromStr("9a6c24746de024f77cac9b2138694f11101d1c66289261224ca52a25155a7c94")
 
-	LI01Tx5SortedSha := LI01Tx5Sorted.TxSha()
-	if !wantSha.IsEqual(&LI01Tx5SortedSha) {
+	li01Tx5SortedSha := li01Tx5Sorted.TxSha()
+	if !wantSha.IsEqual(&li01Tx5SortedSha) {
 		t.Errorf("Example tx 5 txid mismatch. Got %v, want %v",
-			LI01Tx5SortedSha, wantSha)
+			li01Tx5SortedSha, wantSha)
 	}
+}
+
+// newShaHashFromStr converts the passed big-endian hex string into a
+// wire.ShaHash.  It only differs from the one available in wire in that
+// it panics on an error since it will only (and must only) be called with
+// hard-coded, and therefore known good, hashes.
+// Copied from chaincfg tests
+func newShaHashFromStr(hexStr string) *wire.ShaHash {
+	sha, err := wire.NewShaHashFromStr(hexStr)
+	if err != nil {
+		panic(err)
+	}
+	return sha
 }
 
 // Example 1 sorts inputs, but leaves outputs unchanged

@@ -15,14 +15,14 @@ import (
 
 // This example demonstrates how to create a new bloom filter, add a transaction
 // hash to it, and check if the filter matches the transaction.
-func ExampleNewFilter() {
+func ExampleNewBuilder() {
 	rand.Seed(time.Now().UnixNano())
 	tweak := rand.Uint32()
 
 	// Create a new bloom filter intended to hold 10 elements with a 0.01%
 	// false positive rate and does not include any automatic update
 	// functionality when transactions are matched.
-	filter := bloom.NewFilter(10, tweak, 0.0001, wire.BloomUpdateNone)
+	builder := bloom.NewBuilder(10, tweak, 0.0001, wire.BloomUpdateNone)
 
 	// Create a transaction hash and add it to the filter.  This particular
 	// trasaction is the first transaction in block 310,000 of the main
@@ -33,7 +33,13 @@ func ExampleNewFilter() {
 		fmt.Println(err)
 		return
 	}
-	filter.AddShaHash(txHash)
+	builder.AddShaHash(txHash)
+
+	// Create a message from the bloom filter builder and send to a full node.
+	// The full node then creates a Filter, which can check whether the
+	// transaction matches filter.
+	msg := builder.MsgFilterLoad()
+	filter := bloom.LoadFilter(msg)
 
 	// Show that the filter matches.
 	matches := filter.Matches(txHash.Bytes())

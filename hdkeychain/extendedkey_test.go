@@ -132,7 +132,8 @@ tests:
 			continue
 		}
 
-		extKey, err := hdkeychain.NewMaster(masterSeed)
+		extKey, err := hdkeychain.NewMaster(masterSeed,
+			&chaincfg.MainNetParams)
 		if err != nil {
 			t.Errorf("NewMaster #%d (%s): unexpected error when "+
 				"creating new master key: %v", i, test.name,
@@ -585,14 +586,15 @@ func TestNet(t *testing.T) {
 // the errors are handled properly.
 func TestErrors(t *testing.T) {
 	// Should get an error when seed has too few bytes.
-	_, err := hdkeychain.NewMaster(bytes.Repeat([]byte{0x00}, 15))
+	net := &chaincfg.MainNetParams
+	_, err := hdkeychain.NewMaster(bytes.Repeat([]byte{0x00}, 15), net)
 	if err != hdkeychain.ErrInvalidSeedLen {
 		t.Errorf("NewMaster: mismatched error -- got: %v, want: %v",
 			err, hdkeychain.ErrInvalidSeedLen)
 	}
 
 	// Should get an error when seed has too many bytes.
-	_, err = hdkeychain.NewMaster(bytes.Repeat([]byte{0x00}, 65))
+	_, err = hdkeychain.NewMaster(bytes.Repeat([]byte{0x00}, 65), net)
 	if err != hdkeychain.ErrInvalidSeedLen {
 		t.Errorf("NewMaster: mismatched error -- got: %v, want: %v",
 			err, hdkeychain.ErrInvalidSeedLen)
@@ -604,7 +606,7 @@ func TestErrors(t *testing.T) {
 		t.Errorf("GenerateSeed: unexpected error: %v", err)
 		return
 	}
-	extKey, err := hdkeychain.NewMaster(seed)
+	extKey, err := hdkeychain.NewMaster(seed, net)
 	if err != nil {
 		t.Errorf("NewMaster: unexpected error: %v", err)
 		return
@@ -681,12 +683,14 @@ func TestZero(t *testing.T) {
 		name   string
 		master string
 		extKey string
+		net    *chaincfg.Params
 	}{
 		// Test vector 1
 		{
 			name:   "test vector 1 chain m",
 			master: "000102030405060708090a0b0c0d0e0f",
 			extKey: "xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi",
+			net:    &chaincfg.MainNetParams,
 		},
 
 		// Test vector 2
@@ -694,6 +698,7 @@ func TestZero(t *testing.T) {
 			name:   "test vector 2 chain m",
 			master: "fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542",
 			extKey: "xprv9s21ZrQH143K31xYSDQpPDxsXRTUcvj2iNHm5NUtrGiGG5e2DtALGdso3pGz6ssrdK4PFmM8NSpSBHNqPqm55Qn3LqFtT2emdEXVYsCzC2U",
+			net:    &chaincfg.MainNetParams,
 		},
 	}
 
@@ -767,7 +772,7 @@ func TestZero(t *testing.T) {
 				i, test.name, err)
 			continue
 		}
-		key, err := hdkeychain.NewMaster(masterSeed)
+		key, err := hdkeychain.NewMaster(masterSeed, test.net)
 		if err != nil {
 			t.Errorf("NewMaster #%d (%s): unexpected error when "+
 				"creating new master key: %v", i, test.name,

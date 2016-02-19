@@ -47,6 +47,9 @@ func (t *Tx) Sha() *wire.ShaHash {
 	return &sha
 }
 
+// TODO(roasbeef): wtxid function (hash should be cached also)
+// * [nVersion][marker][flag][txins][txouts][witness][nLockTime]
+
 // Index returns the saved index of the transaction within a block.  This value
 // will be TxIndexUnknown if it hasn't already explicitly been set.
 func (t *Tx) Index() int {

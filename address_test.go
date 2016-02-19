@@ -14,6 +14,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/btcsuite/golangcrypto/ripemd160"
 )
 
@@ -464,6 +465,29 @@ func TestAddresses(t *testing.T) {
 			},
 			net: &chaincfg.TestNet3Params,
 		},
+		// Positive P2WKH tests.
+		{
+			name:    "mainnet p2wkh",
+			addr:    "p2xtZoXeX5X8BP8JfFhQK2nD3emtjch7UeFm",
+			encoded: "p2xtZoXeX5X8BP8JfFhQK2nD3emtjch7UeFm",
+			valid:   true,
+			result: btcutil.TstAddressWitnessPubKeyHash(
+				[ripemd160.Size]byte{
+					0x01, 0x09, 0x66, 0x77, 0x60, 0x06, 0x95, 0x3d, 0x55, 0x67,
+					0x43, 0x9e, 0x5e, 0x39, 0xf8, 0x6a, 0xd, 0x27, 0x3b, 0xee},
+				chaincfg.MainNetParams.WitnessPubKeyHashAddrID),
+			f: func() (btcutil.Address, error) {
+				pkHash := []byte{
+					0x01, 0x09, 0x66, 0x77, 0x60, 0x06, 0x95, 0x3d, 0x55, 0x67,
+					0x43, 0x9e, 0x5e, 0x39, 0xf8, 0x6a, 0xd, 0x27, 0x3b, 0xee}
+				return btcutil.NewAddressWitnessPubKeyHash(pkHash, &chaincfg.MainNetParams)
+			},
+			net: &chaincfg.MainNetParams,
+		},
+		// Negative P2WKH tests.
+
+		// Positive P2WSH tests.
+		// Negative P2WSH tests.
 	}
 
 	for _, test := range tests {
@@ -506,6 +530,10 @@ func TestAddresses(t *testing.T) {
 				// Ignore the error here since the script
 				// address is checked below.
 				saddr, _ = hex.DecodeString(d.String())
+			case *btcutil.AddressWitnessPubKeyHash:
+				saddr = base58.Decode(encoded)[3 : 3+ripemd160.Size]
+			case *btcutil.AddressWitnessScriptHash:
+				saddr = base58.Decode(encoded)[3 : 3+wire.HashSize]
 			}
 
 			// Check script address, as well as the Hash160 method for P2PKH and
@@ -522,8 +550,13 @@ func TestAddresses(t *testing.T) {
 						test.name, saddr, h)
 					return
 				}
-
 			case *btcutil.AddressScriptHash:
+				if h := a.Hash160()[:]; !bytes.Equal(saddr, h) {
+					t.Errorf("%v: hashes do not match:\n%x != \n%x",
+						test.name, saddr, h)
+					return
+				}
+			case *btcutil.AddressWitnessPubKeyHash:
 				if h := a.Hash160()[:]; !bytes.Equal(saddr, h) {
 					t.Errorf("%v: hashes do not match:\n%x != \n%x",
 						test.name, saddr, h)

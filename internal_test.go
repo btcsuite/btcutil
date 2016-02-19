@@ -15,6 +15,7 @@ import (
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/btcsuite/golangcrypto/ripemd160"
+	"li.lan/labs/testnet-L/wire"
 )
 
 // SetBlockBytes sets the internal serialized block byte buffer to the passed
@@ -49,6 +50,24 @@ func TstAddressScriptHash(hash [ripemd160.Size]byte,
 	return &AddressScriptHash{
 		hash:  hash,
 		netID: netID,
+	}
+}
+
+func TstAddressWitnessScriptHash(hash [wire.HashSize]byte,
+	netID byte) *AddressWitnessScriptHash {
+
+	return &AddressWitnessScriptHash{
+		scriptHash: hash,
+		netID:      netID,
+	}
+}
+
+func TstAddressWitnessPubKeyHash(hash [ripemd160.Size]byte,
+	netID byte) *AddressWitnessPubKeyHash {
+
+	return &AddressWitnessPubKeyHash{
+		pubKeyHash: hash,
+		netID:      netID,
 	}
 }
 

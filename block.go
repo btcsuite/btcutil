@@ -45,6 +45,14 @@ func (b *Block) MsgBlock() *wire.MsgBlock {
 	return b.msgBlock
 }
 
+// TODO(roasbeef): helper methods
+//  * block w/o witness data
+//  * block w/ witness data
+//  * calculate 'VirtualSize'
+
+// TODO(roasbeef): method to extract witness commitment
+//  * possibly should be in 'wire' instead?
+
 // Bytes returns the serialized bytes for the Block.  This is equivalent to
 // calling Serialize on the underlying wire.MsgBlock, however it caches the
 // result so subsequent calls are more efficient.
@@ -66,6 +74,10 @@ func (b *Block) Bytes() ([]byte, error) {
 	b.serializedBlock = serializedBlock
 	return serializedBlock, nil
 }
+
+// TODO(roasbeef):
+//func (b *Block) WitnessBytes() {
+//}
 
 // Sha returns the block identifier hash for the Block.  This is equivalent to
 // calling BlockSha on the underlying wire.MsgBlock, however it caches the

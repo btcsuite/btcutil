@@ -16,6 +16,7 @@ type merkleBlock struct {
 	numTx       uint32
 	allHashes   []*wire.ShaHash
 	finalHashes []*wire.ShaHash
+	// TODO(roasbeef): wtxid stuff
 	matchedBits []byte
 	bits        []byte
 }

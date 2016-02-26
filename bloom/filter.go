@@ -47,7 +47,7 @@ func NewFilter(elements, tweak uint32, fprate float64, flags wire.BloomUpdateTyp
 	if fprate > 1.0 {
 		fprate = 1.0
 	}
-	if fprate < 0 {
+	if fprate < 1e-9 {
 		fprate = 1e-9
 	}
 

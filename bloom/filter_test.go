@@ -1,4 +1,4 @@
-// Copyright (c) 2013, 2014 The btcsuite developers
+// Copyright (c) 2013, 2014, 2016 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -93,6 +93,68 @@ func TestFilterInsert(t *testing.T) {
 			got.Bytes(), want)
 		return
 	}
+}
+
+// TestFilterFPRange checks that new filters made with out of range
+// false positive targets result in either max or min false positive rates.
+func TestFilterFPRange(t *testing.T) {
+
+	// fprates greater than 1 should be clipped at 1, resulting in a high
+	// false positive rate and small filter size.
+	f := bloom.NewFilter(1, 0, 20.9999999769, wire.BloomUpdateAll)
+
+	inputStr := "02981fa052f0481dbc5868f4fc2166035a10f27a03cfd2de67326471df5bc041"
+	sha, err := wire.NewShaHashFromStr(inputStr)
+	if err != nil {
+		t.Errorf("TestMerkleBlockP2PubKeyOnly NewShaHashFromStr failed: %v", err)
+		return
+	}
+	f.AddShaHash(sha)
+
+	want, err := hex.DecodeString("00000000000000000001")
+	if err != nil {
+		t.Errorf("TestFilterFPRange DecodeString failed: %v\n", err)
+		return
+	}
+	got := bytes.NewBuffer(nil)
+	err = f.MsgFilterLoad().BtcEncode(got, wire.ProtocolVersion)
+	if err != nil {
+		t.Errorf("TestFilterFPRange BtcDecode failed: %v\n", err)
+		return
+	}
+
+	if !bytes.Equal(got.Bytes(), want) {
+		t.Errorf("TestFilterFPRange failure: got %v want %v\n",
+			got.Bytes(), want)
+		return
+	}
+
+	// fprates less than 1e-9, including 0 and negative numbers, should clip at the
+	// minimum false positive rate of 1e-9, resulting in a larger filter.
+
+	f = bloom.NewFilter(1, 0, 0, wire.BloomUpdateAll)
+	f.AddShaHash(sha)
+
+	want, err = hex.DecodeString(
+		"000000000000000000010566d97a91a91b0000000000000001")
+
+	if err != nil {
+		t.Errorf("TestFilterFPRange DecodeString failed: %v\n", err)
+		return
+	}
+
+	err = f.MsgFilterLoad().BtcEncode(got, wire.ProtocolVersion)
+	if err != nil {
+		t.Errorf("TestFilterFPRange BtcDecode failed: %v\n", err)
+		return
+	}
+
+	if !bytes.Equal(got.Bytes(), want) {
+		t.Errorf("TestFilterFPRange failure: got %v want %v\n",
+			got.Bytes(), want)
+		return
+	}
+
 }
 
 // TestFilterInsert ensures inserting data into the filter with a tweak causes

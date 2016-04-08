@@ -82,7 +82,7 @@ func NewTxFromBytes(serializedTx []byte) (*Tx, error) {
 func NewTxFromReader(r io.Reader) (*Tx, error) {
 	// Deserialize the bytes into a MsgTx.
 	var msgTx wire.MsgTx
-	err := msgTx.Deserialize(r)
+	err := msgTx.DeserializeWitness(r)
 	if err != nil {
 		return nil, err
 	}

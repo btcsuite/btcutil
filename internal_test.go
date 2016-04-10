@@ -13,9 +13,9 @@ package btcutil
 
 import (
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/btcsuite/golangcrypto/ripemd160"
-	"li.lan/labs/testnet-L/wire"
 )
 
 // SetBlockBytes sets the internal serialized block byte buffer to the passed

@@ -31,13 +31,13 @@ func (e OutOfRangeError) Error() string {
 // transactions on their first access so subsequent accesses don't have to
 // repeat the relatively expensive hashing operations.
 type Block struct {
-	msgBlock               *wire.MsgBlock // Underlying MsgBlock
-	serializedBlock        []byte         // Serialized bytes for the block
-	serializedBlockWitness []byte
-	blockSha               *wire.ShaHash // Cached block hash
-	blockHeight            int32         // Height in the main block chain
-	transactions           []*Tx         // Transactions
-	txnsGenerated          bool          // ALL wrapped transactions generated
+	msgBlock                 *wire.MsgBlock // Underlying MsgBlock
+	serializedBlock          []byte         // Serialized bytes for the block
+	serializedBlockNoWitness []byte
+	blockSha                 *wire.ShaHash // Cached block hash
+	blockHeight              int32         // Height in the main block chain
+	transactions             []*Tx         // Transactions
+	txnsGenerated            bool          // ALL wrapped transactions generated
 }
 
 // MsgBlock returns the underlying wire.MsgBlock for the Block.
@@ -69,26 +69,23 @@ func (b *Block) Bytes() ([]byte, error) {
 }
 
 // WitnessBytes returns the serialized bytes for the block with transactions
-// encoded using the segragated witness transaction format introduced in
-// BIP0141. This is equivalent to calling SerializeWitness on the underlying
-// wire.MsgBlock, however it caches the result so subsequent calls are more
-// efficient.
-func (b *Block) WitnessBytes() ([]byte, error) {
+// encoded without any witness data.
+func (b *Block) BytesNoWitness() ([]byte, error) {
 	// Return the cached serialized bytes if it has already been generated.
-	if len(b.serializedBlockWitness) != 0 {
-		return b.serializedBlockWitness, nil
+	if len(b.serializedBlockNoWitness) != 0 {
+		return b.serializedBlockNoWitness, nil
 	}
 
 	// Serialize the MsgBlock.
 	var w bytes.Buffer
-	err := b.msgBlock.SerializeWitness(&w)
+	err := b.msgBlock.SerializeNoWitness(&w)
 	if err != nil {
 		return nil, err
 	}
 	serializedBlock := w.Bytes()
 
 	// Cache the serialized bytes and return them.
-	b.serializedBlockWitness = serializedBlock
+	b.serializedBlockNoWitness = serializedBlock
 	return serializedBlock, nil
 }
 
@@ -244,7 +241,7 @@ func NewBlockFromBytes(serializedBlock []byte) (*Block, error) {
 func NewBlockFromReader(r io.Reader) (*Block, error) {
 	// Deserialize the bytes into a MsgBlock.
 	var msgBlock wire.MsgBlock
-	err := msgBlock.DeserializeWitness(r)
+	err := msgBlock.Deserialize(r)
 	if err != nil {
 		return nil, err
 	}

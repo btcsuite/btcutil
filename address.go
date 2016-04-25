@@ -531,7 +531,7 @@ func newAddressWitnessScriptHashFromHash(scriptHash []byte,
 	addr := &AddressWitnessScriptHash{netID: netID, witnessVersion: 0x00}
 	copy(addr.scriptHash[:], scriptHash)
 
-	return nil, nil
+	return addr, nil
 }
 
 // EncodeAddress returns the string encoding of a pay-to-witness-script-hash

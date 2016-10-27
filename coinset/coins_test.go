@@ -109,7 +109,7 @@ func TestCoinSet(t *testing.T) {
 		t.Error("Expected first coin")
 	}
 
-	mtx := coinset.NewMsgTxWithInputCoins(cs)
+	mtx := coinset.NewMsgTxWithInputCoins(wire.TxVersion, cs)
 	if len(mtx.TxIn) != 1 {
 		t.Errorf("Expected only 1 TxIn, got %d", len(mtx.TxIn))
 	}

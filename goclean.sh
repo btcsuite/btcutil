@@ -17,7 +17,7 @@ test -z "$(gometalinter --disable-all \
 --enable=golint \
 --enable=vet \
 --enable=goimports \
---deadline=20s ./... | grep -v 'ALL_CAPS\|OP_' 2>&1 | tee /dev/stderr)"
+--deadline=120s ./... | grep -v 'ALL_CAPS\|OP_\|ExampleNew' 2>&1 | tee /dev/stderr)"
 env GORACE="halt_on_error=1" go test -v -race ./...
 
 # Run test coverage on each subdirectories and merge the coverage profile.

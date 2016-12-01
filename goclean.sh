@@ -14,9 +14,9 @@ set -e
 # Automatic checks
 test -z "$(gometalinter --disable-all \
 --enable=gofmt \
+--enable=goimports \
 --enable=golint \
 --enable=vet \
---enable=goimports \
 --deadline=120s ./... | grep -v 'ExampleNew' 2>&1 | tee /dev/stderr)"
 env GORACE="halt_on_error=1" go test -v -race ./...
 

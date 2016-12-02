@@ -1,4 +1,4 @@
-// Copyright (c) 2014 The btcsuite developers
+// Copyright (c) 2014-2017 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -897,7 +897,7 @@ func TestZero(t *testing.T) {
 	// times.
 	testZeroed := func(i int, testName string, key *hdkeychain.ExtendedKey) bool {
 		// Zeroing a key should result in it no longer being private
-		if key.IsPrivate() != false {
+		if key.IsPrivate() {
 			t.Errorf("IsPrivate #%d (%s): mismatched key type -- "+
 				"want private %v, got private %v", i, testName,
 				false, key.IsPrivate())

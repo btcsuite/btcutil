@@ -1,4 +1,4 @@
-// Copyright (c) 2013, 2014 The btcsuite developers
+// Copyright (c) 2013-2017 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -12,13 +12,9 @@ import (
 	"testing"
 
 	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/golangcrypto/ripemd160"
 )
-
-// invalidNet is an invalid bitcoin network.
-const invalidNet = wire.BitcoinNet(0xffffffff)
 
 func TestAddresses(t *testing.T) {
 	tests := []struct {

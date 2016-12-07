@@ -21,7 +21,7 @@ test -z "$(gometalinter --disable-all \
 --enable=vet \
 --enable=unconvert \
 --deadline=120s ./... | grep -v 'ExampleNew' 2>&1 | tee /dev/stderr)"
-env GORACE="halt_on_error=1" go test -v -race ./...
+env GORACE="halt_on_error=1" go test -race ./...
 
 # Run test coverage on each subdirectories and merge the coverage profile.
 

@@ -34,7 +34,7 @@ const (
 	KeySize = 16
 )
 
-// gcsFilter describes an immutable filter that can be built from
+// GCSFilter describes an immutable filter that can be built from
 // a set of data elements, serialized, deserialized, and queried
 // in a thread-safe manner. The serialized form is compressed as
 // a Golomb Coded Set (GCS), but does not include N or P to allow
@@ -42,7 +42,7 @@ const (
 // hash function used is SipHash, a keyed function; the key used
 // in building the filter is required in order to match filter
 // values and is not included in the serialized form.
-type gcsFilter struct {
+type GCSFilter struct {
 	n          uint32
 	p          uint8
 	modulusP   uint64
@@ -54,7 +54,7 @@ type gcsFilter struct {
 // `1/(2**P)`, key `key`, and including every `[]byte` in `data` as a member of
 // the set.
 func BuildGCSFilter(P uint8, key [KeySize]byte,
-	data [][]byte) (*gcsFilter, error) {
+	data [][]byte) (*GCSFilter, error) {
 
 	// Some initial parameter checks: make sure we have data from which to
 	// build the filter, and make sure our parameters will fit the hash
@@ -70,7 +70,7 @@ func BuildGCSFilter(P uint8, key [KeySize]byte,
 	}
 
 	// Create the filter object and insert metadata.
-	f := gcsFilter{
+	f := GCSFilter{
 		n: uint32(len(data)),
 		p: P,
 	}
@@ -119,7 +119,7 @@ func BuildGCSFilter(P uint8, key [KeySize]byte,
 
 // FromBytes deserializes a GCS filter from a known N, P, and serialized
 // filter as returned by Bytes().
-func FromBytes(N uint32, P uint8, d []byte) (*gcsFilter, error) {
+func FromBytes(N uint32, P uint8, d []byte) (*GCSFilter, error) {
 
 	// Basic sanity check.
 	if P > 32 {
@@ -127,7 +127,7 @@ func FromBytes(N uint32, P uint8, d []byte) (*gcsFilter, error) {
 	}
 
 	// Create the filter object and insert metadata.
-	f := &gcsFilter{
+	f := &GCSFilter{
 		n: N,
 		p: P,
 	}
@@ -142,7 +142,7 @@ func FromBytes(N uint32, P uint8, d []byte) (*gcsFilter, error) {
 
 // Bytes returns the serialized format of the GCS filter, which does not
 // include N or P (returned by separate methods) or the key used by SipHash.
-func (f *gcsFilter) Bytes() []byte {
+func (f *GCSFilter) Bytes() []byte {
 	filterData := make([]byte, len(f.filterData))
 	copy(filterData, f.filterData)
 	return filterData
@@ -150,18 +150,18 @@ func (f *gcsFilter) Bytes() []byte {
 
 // P returns the filter's collision probability as a negative power of 2 (that
 // is, a collision probability of `1/2**20` is represented as 20).
-func (f *gcsFilter) P() uint8 {
+func (f *GCSFilter) P() uint8 {
 	return f.p
 }
 
 // N returns the size of the data set used to build the filter.
-func (f *gcsFilter) N() uint32 {
+func (f *GCSFilter) N() uint32 {
 	return f.n
 }
 
 // Match checks whether a []byte value is likely (within collision
 // probability) to be a member of the set represented by the filter.
-func (f *gcsFilter) Match(key [KeySize]byte, data []byte) (bool, error) {
+func (f *GCSFilter) Match(key [KeySize]byte, data []byte) (bool, error) {
 
 	// Create a filter bitstream.
 	filterData := f.Bytes()
@@ -195,7 +195,7 @@ func (f *gcsFilter) Match(key [KeySize]byte, data []byte) (bool, error) {
 // MatchAny returns checks whether any []byte value is likely (within
 // collision probability) to be a member of the set represented by the
 // filter faster than calling Match() for each value individually.
-func (f *gcsFilter) MatchAny(key [KeySize]byte, data [][]byte) (bool, error) {
+func (f *GCSFilter) MatchAny(key [KeySize]byte, data [][]byte) (bool, error) {
 
 	// Basic sanity check.
 	if len(data) == 0 {
@@ -252,7 +252,7 @@ func (f *gcsFilter) MatchAny(key [KeySize]byte, data [][]byte) (bool, error) {
 
 // readFullUint64 reads a value represented by the sum of a unary multiple
 // of the filter's P modulus (`2**P`) and a big-endian P-bit remainder.
-func (f *gcsFilter) readFullUint64(b *bstream.BStream) (uint64, error) {
+func (f *GCSFilter) readFullUint64(b *bstream.BStream) (uint64, error) {
 	var v uint64
 
 	// Count the 1s until we reach a 0.

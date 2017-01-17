@@ -23,13 +23,7 @@ var (
 	// Filters are conserved between tests but we must define with an
 	// interface which functions we're testing because the gcsFilter
 	// type isn't exported
-	filter, filter2 interface {
-		Match([gcs.KeySize]byte, []byte) (bool, error)
-		MatchAny([gcs.KeySize]byte, [][]byte) (bool, error)
-		N() uint32
-		P() uint8
-		Bytes() []byte
-	}
+	filter, filter2 *gcs.Filter
 
 	// We need to use the same key for building and querying the filters
 	key [gcs.KeySize]byte

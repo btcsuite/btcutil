@@ -15,6 +15,7 @@ import (
 	"github.com/btcsuite/btcutil/gcs"
 )
 
+// DefaultP is the default collision probability (2^-20)
 const DefaultP = 20
 
 // GCSBuilder is a utility class that makes building GCS filters convenient.

@@ -61,7 +61,7 @@ func OutPointToFilterEntry(outpoint wire.OutPoint) []byte {
 	// Size of the hash plus size of int32 index
 	data := make([]byte, chainhash.HashSize+4)
 	copy(data[:], outpoint.Hash.CloneBytes()[:])
-	binary.BigEndian.PutUint32(data[chainhash.HashSize:], outpoint.Index)
+	binary.LittleEndian.PutUint32(data[chainhash.HashSize:], outpoint.Index)
 	return data
 }
 

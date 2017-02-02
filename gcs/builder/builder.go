@@ -188,11 +188,8 @@ func (b *GCSBuilder) AddScript(script []byte) *GCSBuilder {
 		return b
 	}
 
-	data, err := txscript.PushedData(script)
-	if err != nil {
-		b.err = err
-		return b
-	}
+	// Ignore errors and add pushed data, if any
+	data, _ := txscript.PushedData(script)
 	return b.AddEntries(data)
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2013-2014 The btcsuite developers
+// Copyright (c) 2013-2017 The btcsuite developers
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
@@ -14,7 +14,7 @@ package btcutil
 import (
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcutil/base58"
-	"github.com/btcsuite/golangcrypto/ripemd160"
+	"golang.org/x/crypto/ripemd160"
 )
 
 // SetBlockBytes sets the internal serialized block byte buffer to the passed

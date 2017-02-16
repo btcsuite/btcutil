@@ -13,7 +13,7 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
-	"github.com/btcsuite/golangcrypto/ripemd160"
+	"golang.org/x/crypto/ripemd160"
 )
 
 func TestAddresses(t *testing.T) {

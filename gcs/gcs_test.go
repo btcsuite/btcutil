@@ -6,6 +6,7 @@
 package gcs_test
 
 import (
+	"bytes"
 	"encoding/binary"
 	"math/rand"
 	"testing"
@@ -23,7 +24,7 @@ var (
 	// Filters are conserved between tests but we must define with an
 	// interface which functions we're testing because the gcsFilter
 	// type isn't exported
-	filter, filter2 *gcs.Filter
+	filter, filter2, filter3, filter4, filter5 *gcs.Filter
 
 	// We need to use the same key for building and querying the filters
 	key [gcs.KeySize]byte
@@ -90,6 +91,18 @@ func TestGCSFilterCopy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Filter copy failed: %s", err.Error())
 	}
+	filter3, err = gcs.FromNBytes(filter.P(), filter.NBytes())
+	if err != nil {
+		t.Fatalf("Filter copy failed: %s", err.Error())
+	}
+	filter4, err = gcs.FromPBytes(filter.N(), filter.PBytes())
+	if err != nil {
+		t.Fatalf("Filter copy failed: %s", err.Error())
+	}
+	filter5, err = gcs.FromNPBytes(filter.NPBytes())
+	if err != nil {
+		t.Fatalf("Filter copy failed: %s", err.Error())
+	}
 }
 
 // TestGCSFilterMetadata checks that the filter metadata is built and
@@ -104,8 +117,38 @@ func TestGCSFilterMetadata(t *testing.T) {
 	if filter.P() != filter2.P() {
 		t.Fatal("P doesn't match between copied filters")
 	}
+	if filter.P() != filter3.P() {
+		t.Fatal("P doesn't match between copied filters")
+	}
+	if filter.P() != filter4.P() {
+		t.Fatal("P doesn't match between copied filters")
+	}
+	if filter.P() != filter5.P() {
+		t.Fatal("P doesn't match between copied filters")
+	}
 	if filter.N() != filter2.N() {
 		t.Fatal("N doesn't match between copied filters")
+	}
+	if filter.N() != filter3.N() {
+		t.Fatal("N doesn't match between copied filters")
+	}
+	if filter.N() != filter4.N() {
+		t.Fatal("N doesn't match between copied filters")
+	}
+	if filter.N() != filter5.N() {
+		t.Fatal("N doesn't match between copied filters")
+	}
+	if !bytes.Equal(filter.Bytes(), filter2.Bytes()) {
+		t.Fatal("Bytes don't match between copied filters")
+	}
+	if !bytes.Equal(filter.Bytes(), filter3.Bytes()) {
+		t.Fatal("Bytes don't match between copied filters")
+	}
+	if !bytes.Equal(filter.Bytes(), filter4.Bytes()) {
+		t.Fatal("Bytes don't match between copied filters")
+	}
+	if !bytes.Equal(filter.Bytes(), filter5.Bytes()) {
+		t.Fatal("Bytes don't match between copied filters")
 	}
 }
 

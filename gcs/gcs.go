@@ -6,6 +6,7 @@
 package gcs
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"sort"
@@ -140,11 +141,57 @@ func FromBytes(N uint32, P uint8, d []byte) (*Filter, error) {
 	return f, nil
 }
 
+// FromNBytes deserializes a GCS filter from a known P, and serialized N and
+// filter as returned by NBytes().
+func FromNBytes(P uint8, d []byte) (*Filter, error) {
+	return FromBytes(binary.BigEndian.Uint32(d[:4]), P, d[4:])
+}
+
+// FromPBytes deserializes a GCS filter from a known N, and serialized P and
+// filter as returned by NBytes().
+func FromPBytes(N uint32, d []byte) (*Filter, error) {
+	return FromBytes(N, d[0], d[1:])
+}
+
+// FromNPBytes deserializes a GCS filter from a serialized N, P, and filter as
+// returned by NPBytes().
+func FromNPBytes(d []byte) (*Filter, error) {
+	return FromBytes(binary.BigEndian.Uint32(d[:4]), d[4], d[5:])
+}
+
 // Bytes returns the serialized format of the GCS filter, which does not
 // include N or P (returned by separate methods) or the key used by SipHash.
 func (f *Filter) Bytes() []byte {
 	filterData := make([]byte, len(f.filterData))
 	copy(filterData, f.filterData)
+	return filterData
+}
+
+// NBytes returns the serialized format of the GCS filter with N, which does
+// not include P (returned by a separate method) or the key used by SipHash.
+func (f *Filter) NBytes() []byte {
+	filterData := make([]byte, len(f.filterData)+4)
+	binary.BigEndian.PutUint32(filterData[:4], f.n)
+	copy(filterData[4:], f.filterData)
+	return filterData
+}
+
+// PBytes returns the serialized format of the GCS filter with P, which does
+// not include N (returned by a separate method) or the key used by SipHash.
+func (f *Filter) PBytes() []byte {
+	filterData := make([]byte, len(f.filterData)+1)
+	filterData[0] = f.p
+	copy(filterData[1:], f.filterData)
+	return filterData
+}
+
+// NPBytes returns the serialized format of the GCS filter with N and P, which
+// does not include the key used by SipHash.
+func (f *Filter) NPBytes() []byte {
+	filterData := make([]byte, len(f.filterData)+5)
+	binary.BigEndian.PutUint32(filterData[:4], f.n)
+	filterData[4] = f.p
+	copy(filterData[5:], f.filterData)
 	return filterData
 }
 

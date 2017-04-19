@@ -60,6 +60,7 @@ var hexTests = []struct {
 	{"ecac89cad93923c02321", "EJDM8drfXA6uyA"},
 	{"10c8511e", "Rt5zm"},
 	{"00000000000000000000", "1111111111"},
+	{"5b00a0025e4a16612af5a7960eabf7017719f0feeba37435ee291641d652f84dc7f054ccdac136364761d1055c04a26d301567d5598402a2937e5105d2d27bef", "2pXZgXTZ3ATFxvL3fr5TztiVUyjhJ1TYDTk4CP2Fayz2Chb9Ud5zRa3iaDSkfbs5DorAznRZi94RXnXoQ3qUB4Kp"},
 }
 
 func TestBase58(t *testing.T) {

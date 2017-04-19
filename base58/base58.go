@@ -46,30 +46,42 @@ func Decode(b string) []byte {
 }
 
 // Encode encodes a byte slice to a modified base58 string.
-func Encode(b []byte) string {
-	x := new(big.Int)
-	x.SetBytes(b)
+func Encode(bin []byte) string {
+	binsz := int32(len(bin))
+	var i, j, high, zcount, carry int32
 
-	answer := make([]byte, 0, len(b)*136/100)
-	for x.Cmp(bigZero) > 0 {
-		mod := new(big.Int)
-		x.DivMod(x, bigRadix, mod)
-		answer = append(answer, alphabet[mod.Int64()])
+	for zcount < binsz && bin[zcount] == 0 {
+		zcount++
 	}
 
-	// leading zero bytes
-	for _, i := range b {
-		if i != 0 {
-			break
+	size := (binsz-zcount)*138/100 + 1
+	var buf = make([]byte, size)
+
+	high = size - 1
+	for i = zcount; i < binsz; i++ {
+		j = size - 1
+		for carry = int32(bin[i]); j > high || carry != 0; j-- {
+			carry = carry + 256*int32(buf[j])
+			buf[j] = byte(carry % 58)
+			carry /= 58
 		}
-		answer = append(answer, alphabetIdx0)
+		high = j
 	}
 
-	// reverse
-	alen := len(answer)
-	for i := 0; i < alen/2; i++ {
-		answer[i], answer[alen-1-i] = answer[alen-1-i], answer[i]
+	for j = 0; j < size && buf[j] == 0; j++ {
 	}
 
-	return string(answer)
+	var b58 = make([]byte, size-j+zcount)
+	if zcount != 0 {
+		for i = 0; i < zcount; i++ {
+			b58[i] = '1'
+		}
+	}
+
+	for i = zcount; j < size; i++ {
+		b58[i] = alphabet[buf[j]]
+		j++
+	}
+
+	return string(b58)
 }

@@ -271,3 +271,63 @@ func WithRandomKeyP(p uint8) *GCSBuilder {
 func WithRandomKey() *GCSBuilder {
 	return WithRandomKeyPN(DefaultP, 0)
 }
+
+// BuildBasicFilter builds a basic GCS filter from a block.
+func BuildBasicFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
+	blockHash := block.BlockHash()
+	b := WithKeyHash(&blockHash)
+	_, err := b.Key()
+	if err != nil {
+		return nil, err
+	}
+	for i, tx := range block.Transactions {
+		// Skip the inputs for the coinbase transaction
+		if i != 0 {
+			for _, txIn := range tx.TxIn {
+				b.AddOutPoint(txIn.PreviousOutPoint)
+			}
+		}
+		for _, txOut := range tx.TxOut {
+			b.AddScript(txOut.PkScript)
+		}
+	}
+	return b.Build()
+}
+
+// BuildExtFilter builds an extended GCS filter from a block.
+func BuildExtFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
+	blockHash := block.BlockHash()
+	b := WithKeyHash(&blockHash)
+	_, err := b.Key()
+	if err != nil {
+		return nil, err
+	}
+	for i, tx := range block.Transactions {
+		txHash := tx.TxHash()
+		b.AddHash(&txHash)
+		// Skip the inputs for the coinbase transaction
+		if i != 0 {
+			for _, txIn := range tx.TxIn {
+				b.AddScript(txIn.SignatureScript)
+			}
+		}
+	}
+	return b.Build()
+}
+
+// GetFilterHash returns the double-SHA256 of the filter.
+func GetFilterHash(filter *gcs.Filter) chainhash.Hash {
+	hash1 := chainhash.HashH(filter.NBytes())
+	return chainhash.HashH(hash1[:])
+}
+
+// MakeHeaderForFilter makes a filter chain header for a filter, given the
+// filter and the previous filter chain header.
+func MakeHeaderForFilter(filter *gcs.Filter, prevHeader chainhash.Hash) chainhash.Hash {
+	filterTip := make([]byte, 2*chainhash.HashSize)
+	filterHash := GetFilterHash(filter)
+	copy(filterTip, filterHash[:])
+	copy(filterTip[chainhash.HashSize:], prevHeader[:])
+	hash1 := chainhash.HashH(filterTip)
+	return chainhash.HashH(hash1[:])
+}

@@ -328,7 +328,9 @@ func BuildExtFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
 		// Skip the inputs for the coinbase transaction
 		if i != 0 {
 			for _, txIn := range tx.TxIn {
-				b.AddScript(txIn.SignatureScript)
+				if txIn.SignatureScript != nil {
+					b.AddScript(txIn.SignatureScript)
+				}
 			}
 		}
 	}

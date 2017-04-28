@@ -76,7 +76,7 @@ func BuildGCSFilter(P uint8, key [KeySize]byte, data [][]byte) (*Filter, error) 
 	f.modulusNP = uint64(f.n) * f.modulusP
 
 	// Build the filter.
-	var values uint64Slice
+	values := make(uint64Slice, 0, len(data))
 	b := bstream.NewBStreamWriter(0)
 
 	// Insert the hash (modulo N*P) of each data element into a slice and
@@ -260,7 +260,7 @@ func (f *Filter) MatchAny(key [KeySize]byte, data [][]byte) (bool, error) {
 	b := bstream.NewBStreamReader(filterData)
 
 	// Create an uncompressed filter of the search values.
-	var values uint64Slice
+	values := make(uint64Slice, 0, len(data))
 	for _, d := range data {
 		v := siphash.Sum64(d, &key) % f.modulusNP
 		values = append(values, v)

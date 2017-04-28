@@ -371,6 +371,11 @@ func BuildExtFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
 
 // GetFilterHash returns the double-SHA256 of the filter.
 func GetFilterHash(filter *gcs.Filter) chainhash.Hash {
+	var zero chainhash.Hash
+	if filter == nil {
+		return zero
+	}
+
 	hash1 := chainhash.HashH(filter.NBytes())
 	return chainhash.HashH(hash1[:])
 }

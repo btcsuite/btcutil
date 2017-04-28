@@ -194,6 +194,16 @@ func (b *GCSBuilder) AddScript(script []byte) *GCSBuilder {
 	return b.AddEntries(data)
 }
 
+// AddWitness adds each item of the passed filter stack to the filer.
+func (b *GCSBuilder) AddWitness(witness wire.TxWitness) *GCSBuilder {
+	// Do nothing if the builder's already errored out.
+	if b.err != nil {
+		return b
+	}
+
+	return b.AddEntries(witness)
+}
+
 // Build returns a function which builds a GCS filter with the given parameters
 // and data.
 func (b *GCSBuilder) Build() (*gcs.Filter, error) {
@@ -318,18 +328,35 @@ func BuildBasicFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
 func BuildExtFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
 	blockHash := block.BlockHash()
 	b := WithKeyHash(&blockHash)
+
+	// If the filter had an issue with the specified key, then we force it
+	// to bubble up here by calling the Key() function.
 	_, err := b.Key()
 	if err != nil {
 		return nil, err
 	}
+
+	// In order to build an extended filter, we add the hash of each
+	// transaction as well as each piece of witness data included in both
+	// the sigScript and the witness stack of an input.
 	for i, tx := range block.Transactions {
+		// First we'll compute the bash of the transaction and add that
+		// directly to the filter.
 		txHash := tx.TxHash()
 		b.AddHash(&txHash)
+
 		// Skip the inputs for the coinbase transaction
 		if i != 0 {
+			// Next, for each input, we'll add the sigScript (if
+			// it's present), and also the witness stack (if it's
+			// present)
 			for _, txIn := range tx.TxIn {
 				if txIn.SignatureScript != nil {
 					b.AddScript(txIn.SignatureScript)
+				}
+
+				if len(txIn.Witness) != 0 {
+					b.AddWitness(txIn.Witness)
 				}
 			}
 		}

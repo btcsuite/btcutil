@@ -22,8 +22,8 @@ var (
 	P = uint8(20)
 
 	// Filters are conserved between tests but we must define with an
-	// interface which functions we're testing because the gcsFilter
-	// type isn't exported
+	// interface which functions we're testing because the gcsFilter type
+	// isn't exported
 	filter, filter2, filter3, filter4, filter5 *gcs.Filter
 
 	// We need to use the same key for building and querying the filters
@@ -73,8 +73,8 @@ var (
 )
 
 // TestGCSFilterBuild builds a test filter with a randomized key. For Bitcoin
-// use, deterministic filter generation is desired. Therefore, a
-// key that's derived deterministically would be required.
+// use, deterministic filter generation is desired. Therefore, a key that's
+// derived deterministically would be required.
 func TestGCSFilterBuild(t *testing.T) {
 	for i := 0; i < gcs.KeySize; i += 4 {
 		binary.BigEndian.PutUint32(key[i:], rand.Uint32())
@@ -105,8 +105,8 @@ func TestGCSFilterCopy(t *testing.T) {
 	}
 }
 
-// TestGCSFilterMetadata checks that the filter metadata is built and
-// copied correctly.
+// TestGCSFilterMetadata checks that the filter metadata is built and copied
+// correctly.
 func TestGCSFilterMetadata(t *testing.T) {
 	if filter.P() != P {
 		t.Fatal("P not correctly stored in filter metadata")
@@ -213,8 +213,8 @@ func TestGCSFilterMatch(t *testing.T) {
 	}
 }
 
-// TestGCSFilterMatchAny checks that both the built and copied filters match
-// a list correctly, logging any false positives without failing on them.
+// TestGCSFilterMatchAny checks that both the built and copied filters match a
+// list correctly, logging any false positives without failing on them.
 func TestGCSFilterMatchAny(t *testing.T) {
 	match, err := filter.MatchAny(key, contents2)
 	if err != nil {

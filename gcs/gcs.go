@@ -30,19 +30,18 @@ var (
 )
 
 const (
-	//KeySize is the size of the byte array required for key material for
+	// KeySize is the size of the byte array required for key material for
 	// the SipHash keyed hash function.
 	KeySize = 16
 )
 
-// Filter describes an immutable filter that can be built from
-// a set of data elements, serialized, deserialized, and queried
-// in a thread-safe manner. The serialized form is compressed as
-// a Golomb Coded Set (GCS), but does not include N or P to allow
-// the user to encode the metadata separately if necessary. The
-// hash function used is SipHash, a keyed function; the key used
-// in building the filter is required in order to match filter
-// values and is not included in the serialized form.
+// Filter describes an immutable filter that can be built from a set of data
+// elements, serialized, deserialized, and queried in a thread-safe manner. The
+// serialized form is compressed as a Golomb Coded Set (GCS), but does not
+// include N or P to allow the user to encode the metadata separately if
+// necessary. The hash function used is SipHash, a keyed function; the key used
+// in building the filter is required in order to match filter values and is
+// not included in the serialized form.
 type Filter struct {
 	n          uint32
 	p          uint8
@@ -54,9 +53,7 @@ type Filter struct {
 // BuildGCSFilter builds a new GCS filter with the collision probability of
 // `1/(2**P)`, key `key`, and including every `[]byte` in `data` as a member of
 // the set.
-func BuildGCSFilter(P uint8, key [KeySize]byte,
-	data [][]byte) (*Filter, error) {
-
+func BuildGCSFilter(P uint8, key [KeySize]byte, data [][]byte) (*Filter, error) {
 	// Some initial parameter checks: make sure we have data from which to
 	// build the filter, and make sure our parameters will fit the hash
 	// function we're using.
@@ -97,10 +94,12 @@ func BuildGCSFilter(P uint8, key [KeySize]byte,
 		// Calculate the difference between this value and the last,
 		// modulo P.
 		remainder = (v - lastValue) % f.modulusP
+
 		// Calculate the difference between this value and the last,
 		// divided by P.
 		value = (v - lastValue - remainder) / f.modulusP
 		lastValue = v
+
 		// Write the P multiple into the bitstream in unary; the
 		// average should be around 1 (2 bits - 0b10).
 		for value > 0 {
@@ -108,6 +107,7 @@ func BuildGCSFilter(P uint8, key [KeySize]byte,
 			value--
 		}
 		b.WriteBit(false)
+
 		// Write the remainder as a big-endian integer with enough bits
 		// to represent the appropriate collision probability.
 		b.WriteBits(remainder, int(f.p))
@@ -115,11 +115,12 @@ func BuildGCSFilter(P uint8, key [KeySize]byte,
 
 	// Copy the bitstream into the filter object and return the object.
 	f.filterData = b.Bytes()
+
 	return &f, nil
 }
 
-// FromBytes deserializes a GCS filter from a known N, P, and serialized
-// filter as returned by Bytes().
+// FromBytes deserializes a GCS filter from a known N, P, and serialized filter
+// as returned by Bytes().
 func FromBytes(N uint32, P uint8, d []byte) (*Filter, error) {
 
 	// Basic sanity check.
@@ -138,6 +139,7 @@ func FromBytes(N uint32, P uint8, d []byte) (*Filter, error) {
 	// Copy the filter.
 	f.filterData = make([]byte, len(d))
 	copy(f.filterData, d)
+
 	return f, nil
 }
 
@@ -206,8 +208,8 @@ func (f *Filter) N() uint32 {
 	return f.n
 }
 
-// Match checks whether a []byte value is likely (within collision
-// probability) to be a member of the set represented by the filter.
+// Match checks whether a []byte value is likely (within collision probability)
+// to be a member of the set represented by the filter.
 func (f *Filter) Match(key [KeySize]byte, data []byte) (bool, error) {
 
 	// Create a filter bitstream.
@@ -220,8 +222,9 @@ func (f *Filter) Match(key [KeySize]byte, data []byte) (bool, error) {
 	// Go through the search filter and look for the desired value.
 	var lastValue uint64
 	for lastValue < term {
-		// Read the difference between previous and new value
-		// from bitstream.
+
+		// Read the difference between previous and new value from
+		// bitstream.
 		value, err := f.readFullUint64(b)
 		if err != nil {
 			if err == io.EOF {
@@ -229,19 +232,22 @@ func (f *Filter) Match(key [KeySize]byte, data []byte) (bool, error) {
 			}
 			return false, err
 		}
+
 		// Add the previous value to it.
 		value += lastValue
 		if value == term {
 			return true, nil
 		}
+
 		lastValue = value
 	}
+
 	return false, nil
 }
 
-// MatchAny returns checks whether any []byte value is likely (within
-// collision probability) to be a member of the set represented by the
-// filter faster than calling Match() for each value individually.
+// MatchAny returns checks whether any []byte value is likely (within collision
+// probability) to be a member of the set represented by the filter faster than
+// calling Match() for each value individually.
 func (f *Filter) MatchAny(key [KeySize]byte, data [][]byte) (bool, error) {
 
 	// Basic sanity check.
@@ -262,7 +268,8 @@ func (f *Filter) MatchAny(key [KeySize]byte, data [][]byte) (bool, error) {
 	sort.Sort(values)
 
 	// Zip down the filters, comparing values until we either run out of
-	// values to compare in one of the filters or we reach a matching value.
+	// values to compare in one of the filters or we reach a matching
+	// value.
 	var lastValue1, lastValue2 uint64
 	lastValue2 = values[0]
 	i := 1
@@ -292,13 +299,14 @@ func (f *Filter) MatchAny(key [KeySize]byte, data [][]byte) (bool, error) {
 			lastValue1 += value
 		}
 	}
-	// If we've made it this far, an element matched between filters so
-	// we return true.
+
+	// If we've made it this far, an element matched between filters so we
+	// return true.
 	return true, nil
 }
 
-// readFullUint64 reads a value represented by the sum of a unary multiple
-// of the filter's P modulus (`2**P`) and a big-endian P-bit remainder.
+// readFullUint64 reads a value represented by the sum of a unary multiple of
+// the filter's P modulus (`2**P`) and a big-endian P-bit remainder.
 func (f *Filter) readFullUint64(b *bstream.BStream) (uint64, error) {
 	var v uint64
 

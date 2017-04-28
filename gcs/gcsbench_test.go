@@ -41,7 +41,8 @@ func BenchmarkGCSFilterMatch(b *testing.B) {
 	}
 }
 
-// BenchmarkGCSFilterMatchAny benchmarks querying a filter for a list of values.
+// BenchmarkGCSFilterMatchAny benchmarks querying a filter for a list of
+// values.
 func BenchmarkGCSFilterMatchAny(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		filter.MatchAny(key, contents2)

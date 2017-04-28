@@ -191,6 +191,10 @@ func (b *GCSBuilder) AddScript(script []byte) *GCSBuilder {
 
 	// Ignore errors and add pushed data, if any
 	data, _ := txscript.PushedData(script)
+	if len(data) == 0 {
+		return b
+	}
+
 	return b.AddEntries(data)
 }
 

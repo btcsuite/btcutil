@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"errors"
+	"math"
 	"reflect"
 	"testing"
 
@@ -1012,4 +1013,36 @@ func TestZero(t *testing.T) {
 			continue
 		}
 	}
+}
+
+// The serialization of a BIP32 key uses uint8 to encode the depth. This implicitly
+// bounds the depth of the tree to 255 derivations. Here we test that an error is
+// returned after 'max uint8'.
+func TestMaximumDepth(t *testing.T) {
+
+	extKey, err := hdkeychain.NewMaster([]byte(`abcd1234abcd1234abcd1234abcd1234`), &chaincfg.MainNetParams)
+	if err != nil {
+		t.Error("MaxDepthTest: Failed to produce test fixture key from string")
+		return
+	}
+
+	for i := uint8(0); i < math.MaxUint8; i++ {
+		newKey, err := extKey.Child(1)
+		if err != nil {
+			t.Error("MaxDepthTest: Failed to produce key required for test")
+			return
+		}
+		extKey = newKey
+	}
+
+	noKey, err := extKey.Child(1)
+	if noKey != nil {
+		t.Error("MaxDepthTest: Deriving 256th key should not succeed")
+		return
+	}
+
+	if err != hdkeychain.ErrDeriveBeyondMaxDepth {
+		t.Error("MaxDepthTest: Received unexpected error during test")
+	}
+
 }

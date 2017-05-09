@@ -197,15 +197,16 @@ func (k *ExtendedKey) ParentFingerprint() uint32 {
 // returned if this should occur, and the caller is expected to ignore the
 // invalid child and simply increment to the next index.
 func (k *ExtendedKey) Child(i uint32) (*ExtendedKey, error) {
+	// Prevent derivation of children beyond the max allowed depth.
+	if k.depth == maxUint8 {
+		return nil, ErrDeriveBeyondMaxDepth
+	}
+
 	// There are four scenarios that could happen here:
 	// 1) Private extended key -> Hardened child private extended key
 	// 2) Private extended key -> Non-hardened child private extended key
 	// 3) Public extended key -> Non-hardened child public extended key
 	// 4) Public extended key -> Hardened child public extended key (INVALID!)
-
-	if k.depth == maxUint8 {
-		return nil, ErrDeriveBeyondMaxDepth
-	}
 
 	// Case #4 is invalid, so error out early.
 	// A hardened child extended key may not be created from a public

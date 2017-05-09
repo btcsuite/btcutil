@@ -49,6 +49,9 @@ const (
 	// fingerprint, 4 bytes child number, 32 bytes chain code, and 33 bytes
 	// public/private key data.
 	serializedKeyLen = 4 + 1 + 4 + 4 + 32 + 33 // 78 bytes
+
+	// maxUint8 is the max positive integer which can be serialized in a uint8
+	maxUint8 = 1<<8 - 1
 )
 
 var (
@@ -56,6 +59,11 @@ var (
 	// attempted to derive a hardened extended key from a public key.
 	ErrDeriveHardFromPublic = errors.New("cannot derive a hardened key " +
 		"from a public key")
+
+	// ErrDeriveBeyondMaxDepth describes an error in which the caller
+	// has attempted to derive more than 255 keys from a root key.
+	ErrDeriveBeyondMaxDepth = errors.New("cannot derive a key with more than " +
+		"255 indices in its path")
 
 	// ErrNotPrivExtKey describes an error in which the caller attempted
 	// to extract a private key from a public extended key.
@@ -101,7 +109,7 @@ type ExtendedKey struct {
 	key       []byte // This will be the pubkey for extended pub keys
 	pubKey    []byte // This will only be set for extended priv keys
 	chainCode []byte
-	depth     uint16
+	depth     uint8
 	parentFP  []byte
 	childNum  uint32
 	version   []byte
@@ -111,7 +119,7 @@ type ExtendedKey struct {
 // newExtendedKey returns a new instance of an extended key with the given
 // fields.  No error checking is performed here as it's only intended to be a
 // convenience method used to create a populated struct.
-func newExtendedKey(version, key, chainCode, parentFP []byte, depth uint16,
+func newExtendedKey(version, key, chainCode, parentFP []byte, depth uint8,
 	childNum uint32, isPrivate bool) *ExtendedKey {
 
 	// NOTE: The pubKey field is intentionally left nil so it is only
@@ -194,6 +202,10 @@ func (k *ExtendedKey) Child(i uint32) (*ExtendedKey, error) {
 	// 2) Private extended key -> Non-hardened child private extended key
 	// 3) Public extended key -> Non-hardened child public extended key
 	// 4) Public extended key -> Hardened child public extended key (INVALID!)
+
+	if k.depth == maxUint8 {
+		return nil, ErrDeriveBeyondMaxDepth
+	}
 
 	// Case #4 is invalid, so error out early.
 	// A hardened child extended key may not be created from a public
@@ -376,7 +388,6 @@ func (k *ExtendedKey) String() string {
 	}
 
 	var childNumBytes [4]byte
-	depthByte := byte(k.depth % 256)
 	binary.BigEndian.PutUint32(childNumBytes[:], k.childNum)
 
 	// The serialized format is:
@@ -384,7 +395,7 @@ func (k *ExtendedKey) String() string {
 	//   child num (4) || chain code (32) || key data (33) || checksum (4)
 	serializedBytes := make([]byte, 0, serializedKeyLen+4)
 	serializedBytes = append(serializedBytes, k.version...)
-	serializedBytes = append(serializedBytes, depthByte)
+	serializedBytes = append(serializedBytes, k.depth)
 	serializedBytes = append(serializedBytes, k.parentFP...)
 	serializedBytes = append(serializedBytes, childNumBytes[:]...)
 	serializedBytes = append(serializedBytes, k.chainCode...)
@@ -503,7 +514,7 @@ func NewKeyFromString(key string) (*ExtendedKey, error) {
 
 	// Deserialize each of the payload fields.
 	version := payload[:4]
-	depth := uint16(payload[4:5][0])
+	depth := payload[4:5][0]
 	parentFP := payload[5:9]
 	childNum := binary.BigEndian.Uint32(payload[9:13])
 	chainCode := payload[13:45]

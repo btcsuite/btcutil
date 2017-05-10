@@ -25,6 +25,7 @@ func TestBIP0032Vectors(t *testing.T) {
 	// The master seeds for each of the two test vectors in [BIP32].
 	testVec1MasterHex := "000102030405060708090a0b0c0d0e0f"
 	testVec2MasterHex := "fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542"
+	testVec3MasterHex := "4b381541583be4423346c643850da4b320e46a87ae3d2a4e6da11eba819cd4acba45d239319ac14f863b8d5ab5a0d0c64d2e8a1e7d1457df2e5a3c51c73235be"
 	hkStart := uint32(0x80000000)
 
 	tests := []struct {
@@ -132,6 +133,24 @@ func TestBIP0032Vectors(t *testing.T) {
 			path:     []uint32{0, hkStart + 2147483647, 1, hkStart + 2147483646, 2},
 			wantPub:  "xpub6FnCn6nSzZAw5Tw7cgR9bi15UV96gLZhjDstkXXxvCLsUXBGXPdSnLFbdpq8p9HmGsApME5hQTZ3emM2rnY5agb9rXpVGyy3bdW6EEgAtqt",
 			wantPriv: "xprvA2nrNbFZABcdryreWet9Ea4LvTJcGsqrMzxHx98MMrotbir7yrKCEXw7nadnHM8Dq38EGfSh6dqA9QWTyefMLEcBYJUuekgW4BYPJcr9E7j",
+			net:      &chaincfg.MainNetParams,
+		},
+
+		// Test vector 3
+		{
+			name:     "test vector 3 chain m",
+			master:   testVec3MasterHex,
+			path:     []uint32{},
+			wantPub:  "xpub661MyMwAqRbcEZVB4dScxMAdx6d4nFc9nvyvH3v4gJL378CSRZiYmhRoP7mBy6gSPSCYk6SzXPTf3ND1cZAceL7SfJ1Z3GC8vBgp2epUt13",
+			wantPriv: "xprv9s21ZrQH143K25QhxbucbDDuQ4naNntJRi4KUfWT7xo4EKsHt2QJDu7KXp1A3u7Bi1j8ph3EGsZ9Xvz9dGuVrtHHs7pXeTzjuxBrCmmhgC6",
+			net:      &chaincfg.MainNetParams,
+		},
+		{
+			name:     "test vector 3 chain m/0H",
+			master:   testVec3MasterHex,
+			path:     []uint32{hkStart},
+			wantPub:  "xpub68NZiKmJWnxxS6aaHmn81bvJeTESw724CRDs6HbuccFQN9Ku14VQrADWgqbhhTHBaohPX4CjNLf9fq9MYo6oDaPPLPxSb7gwQN3ih19Zm4Y",
+			wantPriv: "xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L",
 			net:      &chaincfg.MainNetParams,
 		},
 

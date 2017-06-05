@@ -116,10 +116,12 @@ type ExtendedKey struct {
 	isPrivate bool
 }
 
-// newExtendedKey returns a new instance of an extended key with the given
+// NewExtendedKey returns a new instance of an extended key with the given
 // fields.  No error checking is performed here as it's only intended to be a
-// convenience method used to create a populated struct.
-func newExtendedKey(version, key, chainCode, parentFP []byte, depth uint8,
+// convenience method used to create a populated struct. This function should
+// only by used by applications that need to create custom ExtendedKeys. All
+// other applications should just use NewMaster, Child, or Neuter.
+func NewExtendedKey(version, key, chainCode, parentFP []byte, depth uint8,
 	childNum uint32, isPrivate bool) *ExtendedKey {
 
 	// NOTE: The pubKey field is intentionally left nil so it is only
@@ -315,7 +317,7 @@ func (k *ExtendedKey) Child(i uint32) (*ExtendedKey, error) {
 	// The fingerprint of the parent for the derived child is the first 4
 	// bytes of the RIPEMD160(SHA256(parentPubKey)).
 	parentFP := btcutil.Hash160(k.pubKeyBytes())[:4]
-	return newExtendedKey(k.version, childKey, childChainCode, parentFP,
+	return NewExtendedKey(k.version, childKey, childChainCode, parentFP,
 		k.depth+1, i, isPrivate), nil
 }
 
@@ -343,7 +345,7 @@ func (k *ExtendedKey) Neuter() (*ExtendedKey, error) {
 	// key will simply be the pubkey of the current extended private key.
 	//
 	// This is the function N((k,c)) -> (K, c) from [BIP32].
-	return newExtendedKey(version, k.pubKeyBytes(), k.chainCode, k.parentFP,
+	return NewExtendedKey(version, k.pubKeyBytes(), k.chainCode, k.parentFP,
 		k.depth, k.childNum, false), nil
 }
 
@@ -487,7 +489,7 @@ func NewMaster(seed []byte, net *chaincfg.Params) (*ExtendedKey, error) {
 	}
 
 	parentFP := []byte{0x00, 0x00, 0x00, 0x00}
-	return newExtendedKey(net.HDPrivateKeyID[:], secretKey, chainCode,
+	return NewExtendedKey(net.HDPrivateKeyID[:], secretKey, chainCode,
 		parentFP, 0, 0, true), nil
 }
 
@@ -541,7 +543,7 @@ func NewKeyFromString(key string) (*ExtendedKey, error) {
 		}
 	}
 
-	return newExtendedKey(version, keyData, chainCode, parentFP, depth,
+	return NewExtendedKey(version, keyData, chainCode, parentFP, depth,
 		childNum, isPrivate), nil
 }
 

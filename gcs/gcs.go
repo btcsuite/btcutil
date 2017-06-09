@@ -93,11 +93,11 @@ func BuildGCSFilter(P uint8, key [KeySize]byte, data [][]byte) (*Filter, error) 
 	for _, v := range values {
 		// Calculate the difference between this value and the last,
 		// modulo P.
-		remainder = (v - lastValue) % f.modulusP
+		remainder = (v - lastValue) & (f.modulusP - 1)
 
 		// Calculate the difference between this value and the last,
 		// divided by P.
-		value = (v - lastValue - remainder) / f.modulusP
+		value = (v - lastValue - remainder) >> f.p
 		lastValue = v
 
 		// Write the P multiple into the bitstream in unary; the

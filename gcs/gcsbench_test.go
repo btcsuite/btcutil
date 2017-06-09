@@ -55,6 +55,30 @@ func BenchmarkGCSFilterBuild50000(b *testing.B) {
 	generatedFilter = localFilter
 }
 
+// BenchmarkGCSFilterBuild benchmarks building a filter.
+func BenchmarkGCSFilterBuild100000(b *testing.B) {
+	b.StopTimer()
+	var testKey [gcs.KeySize]byte
+	for i := 0; i < gcs.KeySize; i += 4 {
+		binary.BigEndian.PutUint32(testKey[i:], rand.Uint32())
+	}
+	randFilterElems, genErr := genRandFilterElements(100000)
+	if err != nil {
+		b.Fatalf("unable to generate random item: %v", genErr)
+	}
+	b.StartTimer()
+
+	var localFilter *gcs.Filter
+	for i := 0; i < b.N; i++ {
+		localFilter, err = gcs.BuildGCSFilter(P, key,
+			randFilterElems)
+		if err != nil {
+			b.Fatalf("unable to generate filter: %v", err)
+		}
+	}
+	generatedFilter = localFilter
+}
+
 var (
 	match bool
 )

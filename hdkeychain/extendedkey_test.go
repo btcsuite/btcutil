@@ -231,6 +231,11 @@ tests:
 			}
 		}
 
+		if extKey.Depth() != uint8(len(test.path)) {
+			t.Errorf("Depth of key %d should match fixture path")
+			continue
+		}
+
 		privStr := extKey.String()
 		if privStr != test.wantPriv {
 			t.Errorf("Serialize #%d (%s): mismatched serialized "+
@@ -1042,6 +1047,10 @@ func TestMaximumDepth(t *testing.T) {
 	}
 
 	for i := uint8(0); i < math.MaxUint8; i++ {
+		if extKey.Depth() != i {
+			t.Fatalf("extendedkey depth %d should match expected value %d",
+				extKey.Depth(), i)
+		}
 		newKey, err := extKey.Child(1)
 		if err != nil {
 			t.Fatalf("Child: unexpected error: %v", err)

@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"sort"
 
 	"github.com/aead/siphash"
@@ -60,7 +61,7 @@ func BuildGCSFilter(P uint8, key [KeySize]byte, data [][]byte) (*Filter, error) 
 	if len(data) == 0 {
 		return nil, ErrNoData
 	}
-	if len(data) > ((1 << 32) - 1) {
+	if len(data) > math.MaxInt32 {
 		return nil, ErrNTooBig
 	}
 	if P > 32 {

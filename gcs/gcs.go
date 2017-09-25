@@ -79,11 +79,31 @@ func BuildGCSFilter(P uint8, key [KeySize]byte, data [][]byte) (*Filter, error) 
 	// Build the filter.
 	values := make(uint64Slice, 0, len(data))
 	b := bstream.NewBStreamWriter(0)
-
-	// Insert the hash (modulo N*P) of each data element into a slice and
-	// sort the slice.
+	// Insert the hash (fast-ranged over a space of N*P) of each data
+	// element into a slice and sort the slice. This can be greatly
+	// optimized with native 128-bit multiplication, but we're going to be
+	// fully portable for now.
+	var v, vhi, vlo, nphi, nplo, vnphi, vnpmid, npvmid, vnplo, carry uint64
+	// First, we cache the high and low bits of modulusNP for the
+	// multiplication of 2 64-bit integers into a 128-bit integer.
+	nphi = f.modulusNP >> 32
+	nplo = uint64(uint32(f.modulusNP))
 	for _, d := range data {
-		v := siphash.Sum64(d, &key) % f.modulusNP
+		// For each datum, we assign the initial hash to a uint64.
+		v = siphash.Sum64(d, &key)
+		// Then, we split it into high bits and low bits.
+		vhi = v >> 32
+		vlo = uint64(uint32(v))
+		// Then, we distribute multiplication over each part.
+		vnphi = vhi * nphi
+		vnpmid = vhi * nplo
+		npvmid = nphi * vlo
+		vnplo = vlo * nplo
+		// We calculate the carry bit.
+		carry = (uint64(uint32(vnpmid)) + uint64(uint32(npvmid)) +
+			(vnplo >> 32)) >> 32
+		// Last, we add the high bits, the middle bits, and the carry.
+		v = vnphi + (vnpmid >> 32) + (npvmid >> 32) + carry
 		values = append(values, v)
 	}
 	sort.Sort(values)
@@ -217,8 +237,25 @@ func (f *Filter) Match(key [KeySize]byte, data []byte) (bool, error) {
 	filterData := f.Bytes()
 	b := bstream.NewBStreamReader(filterData)
 
-	// Hash our search term with the same parameters as the filter.
-	term := siphash.Sum64(data, &key) % f.modulusNP
+	// We take the high and low bits of modulusNP for the multiplication
+	// of 2 64-bit integers into a 128-bit integer.
+	nphi := f.modulusNP >> 32
+	nplo := uint64(uint32(f.modulusNP))
+	// Then we hash our search term with the same parameters as the filter.
+	term := siphash.Sum64(data, &key)
+	// Then, we split it into high bits and low bits.
+	vhi := term >> 32
+	vlo := uint64(uint32(term))
+	// Then, we distribute multiplication over each part.
+	vnphi := vhi * nphi
+	vnpmid := vhi * nplo
+	npvmid := nphi * vlo
+	vnplo := vlo * nplo
+	// We calculate the carry bit.
+	carry := (uint64(uint32(vnpmid)) + uint64(uint32(npvmid)) +
+		(vnplo >> 32)) >> 32
+	// Last, we add the high bits, the middle bits, and the carry.
+	term = vnphi + (vnpmid >> 32) + (npvmid >> 32) + carry
 
 	// Go through the search filter and look for the desired value.
 	var lastValue uint64
@@ -262,8 +299,27 @@ func (f *Filter) MatchAny(key [KeySize]byte, data [][]byte) (bool, error) {
 
 	// Create an uncompressed filter of the search values.
 	values := make(uint64Slice, 0, len(data))
+	var v, vhi, vlo, nphi, nplo, vnphi, vnpmid, npvmid, vnplo, carry uint64
+	// First, we cache the high and low bits of modulusNP for the
+	// multiplication of 2 64-bit integers into a 128-bit integer.
+	nphi = f.modulusNP >> 32
+	nplo = uint64(uint32(f.modulusNP))
 	for _, d := range data {
-		v := siphash.Sum64(d, &key) % f.modulusNP
+		// For each datum, we assign the initial hash to a uint64.
+		v = siphash.Sum64(d, &key)
+		// Then, we split it into high bits and low bits.
+		vhi = v >> 32
+		vlo = uint64(uint32(v))
+		// Then, we distribute multiplication over each part.
+		vnphi = vhi * nphi
+		vnpmid = vhi * nplo
+		npvmid = nphi * vlo
+		vnplo = vlo * nplo
+		// We calculate the carry bit.
+		carry = (uint64(uint32(vnpmid)) + uint64(uint32(npvmid)) +
+			(vnplo >> 32)) >> 32
+		// Last, we add the high bits, the middle bits, and the carry.
+		v = vnphi + (vnpmid >> 32) + (npvmid >> 32) + carry
 		values = append(values, v)
 	}
 	sort.Sort(values)

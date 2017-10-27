@@ -261,7 +261,7 @@ func BuilderTest(b *builder.GCSBuilder, hash *chainhash.Hash, p uint8,
 	}
 	pushedData, err := txscript.PushedData(addrBytes)
 	if err != nil {
-		t.Fatalf("Couldn't extract pushed data from addrBytesess script: %s",
+		t.Fatalf("Couldn't extract pushed data from addrBytes script: %s",
 			err.Error())
 	}
 	match, err = f.MatchAny(key, pushedData)
@@ -269,17 +269,21 @@ func BuilderTest(b *builder.GCSBuilder, hash *chainhash.Hash, p uint8,
 		t.Fatalf("Filter match any failed: %s", err)
 	}
 	if !match {
-		t.Logf("Filter didn't match when it should have!")
+		t.Fatal("Filter didn't match when it should have!")
 	}
 
 	// Add a routine witness stack, build a filter, and test that it
 	// matches.
 	b.AddWitness(witness)
+	f, err = b.Build()
+	if err != nil {
+		t.Fatalf("Filter build failed: %s", err.Error())
+	}
 	match, err = f.MatchAny(key, witness)
 	if err != nil {
 		t.Fatalf("Filter match any failed: %s", err)
 	}
 	if !match {
-		t.Logf("Filter didn't match when it should have!")
+		t.Fatal("Filter didn't match when it should have!")
 	}
 }

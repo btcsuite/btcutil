@@ -319,6 +319,11 @@ func BuildBasicFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
 	// adding the outpoint data as well as the data pushes within the
 	// pkScript.
 	for i, tx := range block.Transactions {
+		// First we'll compute the bash of the transaction and add that
+		// directly to the filter.
+		txHash := tx.TxHash()
+		b.AddHash(&txHash)
+
 		// Skip the inputs for the coinbase transaction
 		if i != 0 {
 			// Each each txin, we'll add a serialized version of
@@ -358,11 +363,6 @@ func BuildExtFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
 	// transaction as well as each piece of witness data included in both
 	// the sigScript and the witness stack of an input.
 	for i, tx := range block.Transactions {
-		// First we'll compute the bash of the transaction and add that
-		// directly to the filter.
-		txHash := tx.TxHash()
-		b.AddHash(&txHash)
-
 		// Skip the inputs for the coinbase transaction
 		if i != 0 {
 			// Next, for each input, we'll add the sigScript (if

@@ -195,17 +195,31 @@ func (b *GCSBuilder) AddScript(script []byte) *GCSBuilder {
 		return b
 	}
 
-	return b.AddEntries(data)
+	b.AddEntries(data)
+
+	// Recurse into each pushed datum and attempt to add it as a script.
+	for _, datum := range data {
+		b.AddScript(datum)
+	}
+
+	return b
 }
 
-// AddWitness adds each item of the passed filter stack to the filer.
+// AddWitness adds each item of the passed filter stack to the filter, and then
+// adds each item as a script.
 func (b *GCSBuilder) AddWitness(witness wire.TxWitness) *GCSBuilder {
 	// Do nothing if the builder's already errored out.
 	if b.err != nil {
 		return b
 	}
 
-	return b.AddEntries(witness)
+	b.AddEntries(witness)
+
+	for _, script := range witness {
+		b.AddScript(script)
+	}
+
+	return b
 }
 
 // Build returns a function which builds a GCS filter with the given parameters

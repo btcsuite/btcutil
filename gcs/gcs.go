@@ -25,9 +25,6 @@ var (
 	// ErrPTooBig signifies that the filter can't handle `1/2**P`
 	// collision probability.
 	ErrPTooBig = fmt.Errorf("P is too big to fit in uint32")
-
-	// ErrNoData signifies that an empty slice was passed.
-	ErrNoData = fmt.Errorf("No data provided")
 )
 
 const (
@@ -98,9 +95,6 @@ func BuildGCSFilter(P uint8, key [KeySize]byte, data [][]byte) (*Filter, error) 
 	// Some initial parameter checks: make sure we have data from which to
 	// build the filter, and make sure our parameters will fit the hash
 	// function we're using.
-	if len(data) == 0 {
-		return nil, ErrNoData
-	}
 	if uint64(len(data)) >= (1 << 32) {
 		return nil, ErrNTooBig
 	}
@@ -114,6 +108,11 @@ func BuildGCSFilter(P uint8, key [KeySize]byte, data [][]byte) (*Filter, error) 
 		p: P,
 	}
 	f.modulusNP = uint64(f.n) << P
+
+	// Shortcut if the filter is empty.
+	if f.n == 0 {
+		return &f, nil
+	}
 
 	// Build the filter.
 	values := make(uint64Slice, 0, len(data))
@@ -358,7 +357,7 @@ func (f *Filter) MatchAny(key [KeySize]byte, data [][]byte) (bool, error) {
 
 	// Basic sanity check.
 	if len(data) == 0 {
-		return false, ErrNoData
+		return false, nil
 	}
 
 	// Create a filter bitstream.

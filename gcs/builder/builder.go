@@ -371,21 +371,28 @@ func BuildExtFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
 }
 
 // GetFilterHash returns the double-SHA256 of the filter.
-func GetFilterHash(filter *gcs.Filter) chainhash.Hash {
+func GetFilterHash(filter *gcs.Filter) (chainhash.Hash, error) {
 	var zero chainhash.Hash
 	if filter == nil {
-		return zero
+		return zero, nil
 	}
 
-	hash1 := chainhash.HashH(filter.NBytes())
-	return chainhash.HashH(hash1[:])
+	filterData, err := filter.NBytes()
+	if err != nil {
+		return zero, err
+	}
+
+	return chainhash.DoubleHashH(filterData), nil
 }
 
 // MakeHeaderForFilter makes a filter chain header for a filter, given the
 // filter and the previous filter chain header.
-func MakeHeaderForFilter(filter *gcs.Filter, prevHeader chainhash.Hash) chainhash.Hash {
+func MakeHeaderForFilter(filter *gcs.Filter, prevHeader chainhash.Hash) (chainhash.Hash, error) {
 	filterTip := make([]byte, 2*chainhash.HashSize)
-	filterHash := GetFilterHash(filter)
+	filterHash, err := GetFilterHash(filter)
+	if err != nil {
+		return chainhash.Hash{}, err
+	}
 
 	// In the buffer we created above we'll compute hash || prevHash as an
 	// intermediate value.
@@ -394,6 +401,5 @@ func MakeHeaderForFilter(filter *gcs.Filter, prevHeader chainhash.Hash) chainhas
 
 	// The final filter hash is the double-sha256 of the hash computed
 	// above.
-	hash1 := chainhash.HashH(filterTip)
-	return chainhash.HashH(hash1[:])
+	return chainhash.DoubleHashH(filterTip), nil
 }

@@ -286,4 +286,16 @@ func BuilderTest(b *builder.GCSBuilder, hash *chainhash.Hash, p uint8,
 	if !match {
 		t.Fatal("Filter didn't match when it should have!")
 	}
+
+	// Check that adding duplicate items does not increase filter size.
+	originalSize := f.N()
+	b.AddScript(addrBytes)
+	b.AddWitness(witness)
+	f, err = b.Build()
+	if err != nil {
+		t.Fatalf("Filter build failed: %s", err.Error())
+	}
+	if f.N() != originalSize {
+		t.Fatal("Filter size increased with duplicate items")
+	}
 }

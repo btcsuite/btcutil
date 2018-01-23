@@ -20,9 +20,12 @@ const DefaultP = 20
 
 // GCSBuilder is a utility class that makes building GCS filters convenient.
 type GCSBuilder struct {
-	p    uint8
-	key  [gcs.KeySize]byte
-	data [][]byte
+	p   uint8
+	key [gcs.KeySize]byte
+
+	// data is a set of entries represented as strings. This is done to
+	// deduplicate items as they are added.
+	data map[string]struct{}
 	err  error
 }
 
@@ -125,8 +128,8 @@ func (b *GCSBuilder) Preallocate(n uint32) *GCSBuilder {
 		return b
 	}
 
-	if len(b.data) == 0 {
-		b.data = make([][]byte, 0, n)
+	if b.data == nil {
+		b.data = make(map[string]struct{}, n)
 	}
 
 	return b
@@ -140,7 +143,7 @@ func (b *GCSBuilder) AddEntry(data []byte) *GCSBuilder {
 		return b
 	}
 
-	b.data = append(b.data, data)
+	b.data[string(data)] = struct{}{}
 	return b
 }
 
@@ -217,7 +220,12 @@ func (b *GCSBuilder) Build() (*gcs.Filter, error) {
 		return nil, b.err
 	}
 
-	return gcs.BuildGCSFilter(b.p, b.key, b.data)
+	dataSlice := make([][]byte, 0, len(b.data))
+	for item := range b.data {
+		dataSlice = append(dataSlice, []byte(item))
+	}
+
+	return gcs.BuildGCSFilter(b.p, b.key, dataSlice)
 }
 
 // WithKeyPN creates a GCSBuilder with specified key and the passed probability

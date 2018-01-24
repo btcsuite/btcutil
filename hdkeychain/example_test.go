@@ -7,7 +7,7 @@ package hdkeychain_test
 import (
 	"fmt"
 
-	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/auxcoin-project/auxcoin/chaincfg"
 	"github.com/btcsuite/btcutil/hdkeychain"
 )
 

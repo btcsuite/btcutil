@@ -5,9 +5,9 @@
 package bloom
 
 import (
-	"github.com/btcsuite/btcd/blockchain"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
+	"github.com/auxcoin-project/auxcoin/blockchain"
+	"github.com/auxcoin-project/auxcoin/chaincfg/chainhash"
+	"github.com/auxcoin-project/auxcoin/wire"
 	"github.com/btcsuite/btcutil"
 )
 

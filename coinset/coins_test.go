@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
+	"github.com/auxcoin-project/auxcoin/chaincfg/chainhash"
+	"github.com/auxcoin-project/auxcoin/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/btcsuite/btcutil/coinset"
 )

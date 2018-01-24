@@ -12,7 +12,7 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/btcsuite/btcutil"
+	"github.com/auxcoin-project/btcutil"
 )
 
 // TestAppDataDir tests the API for AppDataDir to ensure it gives expected

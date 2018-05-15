@@ -232,7 +232,8 @@ tests:
 		}
 
 		if extKey.Depth() != uint8(len(test.path)) {
-			t.Errorf("Depth of key %d should match fixture path")
+			t.Errorf("Depth of key %d should match fixture path: %v",
+				extKey.Depth(), len(test.path))
 			continue
 		}
 

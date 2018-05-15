@@ -79,6 +79,6 @@ func BenchmarkSerialize(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		masterKey.String()
+		_ = masterKey.String()
 	}
 }

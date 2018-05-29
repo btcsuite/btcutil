@@ -105,7 +105,7 @@ func TestUseBlockHash(t *testing.T) {
 	BuilderTest(b, hash, builder.DefaultP, outPoint, addrBytes, witness, t)
 
 	// Create a GCSBuilder with a key hash and non-default P and test it.
-	b = builder.WithKeyHashP(hash, 30)
+	b = builder.WithKeyHashPM(hash, 30, 90)
 	BuilderTest(b, hash, 30, outPoint, addrBytes, witness, t)
 
 	// Create a GCSBuilder with a random key, set the key from a hash
@@ -135,7 +135,7 @@ func TestUseBlockHash(t *testing.T) {
 	BuilderTest(b, hash, builder.DefaultP, outPoint, addrBytes, witness, t)
 
 	// Create a GCSBuilder with a random key and non-default P and test it.
-	b = builder.WithRandomKeyP(30)
+	b = builder.WithRandomKeyPM(30, 90)
 	key2, err := b.Key()
 	if err != nil {
 		t.Fatalf("Builder instantiation with random key failed: %s",
@@ -162,7 +162,7 @@ func TestUseBlockHash(t *testing.T) {
 	BuilderTest(b, hash, builder.DefaultP, outPoint, addrBytes, witness, t)
 
 	// Create a GCSBuilder with a known key and non-default P and test it.
-	b = builder.WithKeyP(testKey, 30)
+	b = builder.WithKeyPM(testKey, 30, 90)
 	key, err = b.Key()
 	if err != nil {
 		t.Fatalf("Builder instantiation with known key failed: %s",
@@ -177,7 +177,7 @@ func TestUseBlockHash(t *testing.T) {
 
 	// Create a GCSBuilder with a known key and too-high P and ensure error
 	// works throughout all functions that use it.
-	b = builder.WithRandomKeyP(33).SetKeyFromHash(hash).SetKey(testKey)
+	b = builder.WithRandomKeyPM(33, 99).SetKeyFromHash(hash).SetKey(testKey)
 	b.SetP(30).AddEntry(hash.CloneBytes()).AddEntries(contents)
 	b.AddOutPoint(outPoint).AddHash(hash).AddScript(addrBytes)
 	_, err = b.Key()

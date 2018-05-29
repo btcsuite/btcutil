@@ -20,7 +20,8 @@ const DefaultP = 20
 
 // GCSBuilder is a utility class that makes building GCS filters convenient.
 type GCSBuilder struct {
-	p   uint8
+	p uint8
+
 	key [gcs.KeySize]byte
 
 	// data is a set of entries represented as strings. This is done to
@@ -242,8 +243,8 @@ func WithKeyP(key [gcs.KeySize]byte, p uint8) *GCSBuilder {
 	return WithKeyPN(key, p, 0)
 }
 
-// WithKey creates a GCSBuilder with specified key. Probability is set to
-// 20 (2^-20 collision probability). Estimated filter size is set to zero, which
+// WithKey creates a GCSBuilder with specified key. Probability is set to 19
+// (2^-19 collision probability). Estimated filter size is set to zero, which
 // means more reallocations are done when building the filter.
 func WithKey(key [gcs.KeySize]byte) *GCSBuilder {
 	return WithKeyPN(key, DefaultP, 0)
@@ -314,11 +315,6 @@ func BuildBasicFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
 	// adding the outpoint data as well as the data pushes within the
 	// pkScript.
 	for i, tx := range block.Transactions {
-		// First we'll compute the bash of the transaction and add that
-		// directly to the filter.
-		txHash := tx.TxHash()
-		b.AddHash(&txHash)
-
 		// Skip the inputs for the coinbase transaction
 		if i != 0 {
 			// Each each txin, we'll add a serialized version of

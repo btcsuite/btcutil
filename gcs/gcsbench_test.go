@@ -10,7 +10,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/roasbeef/btcutil/gcs"
+	"github.com/btcsuite/btcutil/gcs"
 )
 
 func genRandFilterElements(numElements uint) ([][]byte, error) {
@@ -46,8 +46,9 @@ func BenchmarkGCSFilterBuild50000(b *testing.B) {
 
 	var localFilter *gcs.Filter
 	for i := 0; i < b.N; i++ {
-		localFilter, err = gcs.BuildGCSFilter(P, key,
-			randFilterElems)
+		localFilter, err = gcs.BuildGCSFilter(
+			P, key, randFilterElems,
+		)
 		if err != nil {
 			b.Fatalf("unable to generate filter: %v", err)
 		}

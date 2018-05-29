@@ -254,17 +254,12 @@ func BuilderTest(b *builder.GCSBuilder, hash *chainhash.Hash, p uint8,
 	}
 
 	// Add a script, build a filter, and test matches
-	b.AddScript(addrBytes)
+	b.AddEntry(addrBytes)
 	f, err = b.Build()
 	if err != nil {
 		t.Fatalf("Filter build failed: %s", err.Error())
 	}
-	pushedData, err := txscript.PushedData(addrBytes)
-	if err != nil {
-		t.Fatalf("Couldn't extract pushed data from addrBytes script: %s",
-			err.Error())
-	}
-	match, err = f.MatchAny(key, pushedData)
+	match, err = f.MatchAny(key, [][]byte{addrBytes})
 	if err != nil {
 		t.Fatalf("Filter match any failed: %s", err)
 	}

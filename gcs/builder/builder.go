@@ -371,46 +371,6 @@ func BuildBasicFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
 	return b.Build()
 }
 
-// BuildExtFilter builds an extended GCS filter from a block. An extended
-// filter supplements a regular basic filter by include all the _witness_ data
-// found within a block. This includes all the data pushes within any signature
-// scripts as well as each element of an input's witness stack. Additionally,
-// the _hashes_ of each transaction are also inserted into the filter.
-func BuildExtFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
-	blockHash := block.BlockHash()
-	b := WithKeyHash(&blockHash)
-
-	// If the filter had an issue with the specified key, then we force it
-	// to bubble up here by calling the Key() function.
-	_, err := b.Key()
-	if err != nil {
-		return nil, err
-	}
-
-	// In order to build an extended filter, we add the hash of each
-	// transaction as well as each piece of witness data included in both
-	// the sigScript and the witness stack of an input.
-	for i, tx := range block.Transactions {
-		// Skip the inputs for the coinbase transaction
-		if i != 0 {
-			// Next, for each input, we'll add the sigScript (if
-			// it's present), and also the witness stack (if it's
-			// present)
-			for _, txIn := range tx.TxIn {
-				if txIn.SignatureScript != nil {
-					b.AddScript(txIn.SignatureScript)
-				}
-
-				if len(txIn.Witness) != 0 {
-					b.AddWitness(txIn.Witness)
-				}
-			}
-		}
-	}
-
-	return b.Build()
-}
-
 // GetFilterHash returns the double-SHA256 of the filter.
 func GetFilterHash(filter *gcs.Filter) (chainhash.Hash, error) {
 	filterData, err := filter.NBytes()

@@ -175,7 +175,6 @@ func BuildGCSFilter(P uint8, M uint64, key [KeySize]byte, data [][]byte) (*Filte
 // FromBytes deserializes a GCS filter from a known N, P, and serialized filter
 // as returned by Bytes().
 func FromBytes(N uint32, P uint8, M uint64, d []byte) (*Filter, error) {
-
 	// Basic sanity check.
 	if P > 32 {
 		return nil, ErrPTooBig
@@ -287,7 +286,6 @@ func (f *Filter) N() uint32 {
 // Match checks whether a []byte value is likely (within collision probability)
 // to be a member of the set represented by the filter.
 func (f *Filter) Match(key [KeySize]byte, data []byte) (bool, error) {
-
 	// Create a filter bitstream.
 	filterData, err := f.Bytes()
 	if err != nil {
@@ -335,7 +333,6 @@ func (f *Filter) Match(key [KeySize]byte, data []byte) (bool, error) {
 // probability) to be a member of the set represented by the filter faster than
 // calling Match() for each value individually.
 func (f *Filter) MatchAny(key [KeySize]byte, data [][]byte) (bool, error) {
-
 	// Basic sanity check.
 	if len(data) == 0 {
 		return false, nil

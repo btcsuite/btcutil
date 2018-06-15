@@ -335,9 +335,9 @@ func WithRandomKey() *GCSBuilder {
 }
 
 // BuildBasicFilter builds a basic GCS filter from a block. A basic GCS filter
-// will contain all the previous outpoints spent within a block, as well as the
-// data pushes within all the outputs created within a block.
-func BuildBasicFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
+// will contain all the previous output scripts spent by inputs within a block,
+// as well as the data pushes within all the outputs created within a block.
+func BuildBasicFilter(block *wire.MsgBlock, prevOutScripts [][]byte) (*gcs.Filter, error) {
 	blockHash := block.BlockHash()
 	b := WithKeyHash(&blockHash)
 
@@ -349,23 +349,19 @@ func BuildBasicFilter(block *wire.MsgBlock) (*gcs.Filter, error) {
 	}
 
 	// In order to build a basic filter, we'll range over the entire block,
-	// adding the outpoint data as well as the data pushes within the
-	// pkScript.
-	for i, tx := range block.Transactions {
-		// Skip the inputs for the coinbase transaction
-		if i != 0 {
-			// Each each txin, we'll add a serialized version of
-			// the txid:index to the filters data slices.
-			for _, txIn := range tx.TxIn {
-				b.AddOutPoint(txIn.PreviousOutPoint)
-			}
-		}
-
+	// adding each whole script itself.
+	for _, tx := range block.Transactions {
 		// For each output in a transaction, we'll add each of the
 		// individual data pushes within the script.
 		for _, txOut := range tx.TxOut {
 			b.AddEntry(txOut.PkScript)
 		}
+	}
+
+	// In the second pass, we'll also add all the prevOutScripts
+	// individually as elements.
+	for _, prevScript := range prevOutScripts {
+		b.AddEntry(prevScript)
 	}
 
 	return b.Build()

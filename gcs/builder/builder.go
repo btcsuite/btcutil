@@ -331,6 +331,14 @@ func BuildBasicFilter(block *wire.MsgBlock, prevOutScripts [][]byte) (*gcs.Filte
 		// For each output in a transaction, we'll add each of the
 		// individual data pushes within the script.
 		for _, txOut := range tx.TxOut {
+			// In order to allow the filters to later be committed
+			// to within an OP_RETURN output, we ignore all
+			// OP_RETURNs to avoid a circular dependency.
+			if txOut.PkScript[0] == txscript.OP_RETURN &&
+				txscript.IsPushOnlyScript(txOut.PkScript[1:]) {
+				continue
+			}
+
 			b.AddEntry(txOut.PkScript)
 		}
 	}

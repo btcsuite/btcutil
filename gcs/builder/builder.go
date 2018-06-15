@@ -7,7 +7,6 @@ package builder
 
 import (
 	"crypto/rand"
-	"encoding/binary"
 	"fmt"
 	"math"
 
@@ -65,17 +64,6 @@ func DeriveKey(keyHash *chainhash.Hash) [gcs.KeySize]byte {
 	var key [gcs.KeySize]byte
 	copy(key[:], keyHash.CloneBytes()[:])
 	return key
-}
-
-// OutPointToFilterEntry is a utility function that derives a filter entry from
-// a wire.OutPoint in a standardized way for use with both building and
-// querying filters.
-func OutPointToFilterEntry(outpoint wire.OutPoint) []byte {
-	// Size of the hash plus size of int32 index
-	data := make([]byte, chainhash.HashSize+4)
-	copy(data[:], outpoint.Hash.CloneBytes()[:])
-	binary.LittleEndian.PutUint32(data[chainhash.HashSize:], outpoint.Index)
-	return data
 }
 
 // Key retrieves the key with which the builder will build a filter. This is
@@ -186,17 +174,6 @@ func (b *GCSBuilder) AddEntries(data [][]byte) *GCSBuilder {
 		b.AddEntry(entry)
 	}
 	return b
-}
-
-// AddOutPoint adds a wire.OutPoint to the list of entries to be included in
-// the GCS filter when it's built.
-func (b *GCSBuilder) AddOutPoint(outpoint wire.OutPoint) *GCSBuilder {
-	// Do nothing if the builder's already errored out.
-	if b.err != nil {
-		return b
-	}
-
-	return b.AddEntry(OutPointToFilterEntry(outpoint))
 }
 
 // AddHash adds a chainhash.Hash to the list of entries to be included in the

@@ -178,8 +178,8 @@ func TestUseBlockHash(t *testing.T) {
 	// Create a GCSBuilder with a known key and too-high P and ensure error
 	// works throughout all functions that use it.
 	b = builder.WithRandomKeyPM(33, 99).SetKeyFromHash(hash).SetKey(testKey)
-	b.SetP(30).AddEntry(hash.CloneBytes()).AddEntries(contents)
-	b.AddOutPoint(outPoint).AddHash(hash).AddScript(addrBytes)
+	b.SetP(30).AddEntry(hash.CloneBytes()).AddEntries(contents).
+		AddHash(hash).AddScript(addrBytes)
 	_, err = b.Key()
 	if err != gcs.ErrPTooBig {
 		t.Fatalf("No error on P too big!")
@@ -227,20 +227,6 @@ func BuilderTest(b *builder.GCSBuilder, hash *chainhash.Hash, p uint8,
 
 	// Add a hash, build a filter, and test matches
 	b.AddHash(hash)
-	f, err = b.Build()
-	if err != nil {
-		t.Fatalf("Filter build failed: %s", err.Error())
-	}
-	match, err = f.Match(key, hash.CloneBytes())
-	if err != nil {
-		t.Fatalf("Filter match failed: %s", err)
-	}
-	if !match {
-		t.Fatal("Filter didn't match when it should have!")
-	}
-
-	// Add a wire.OutPoint, build a filter, and test matches
-	b.AddOutPoint(outPoint)
 	f, err = b.Build()
 	if err != nil {
 		t.Fatalf("Filter build failed: %s", err.Error())

@@ -187,24 +187,6 @@ func (b *GCSBuilder) AddHash(hash *chainhash.Hash) *GCSBuilder {
 	return b.AddEntry(hash.CloneBytes())
 }
 
-// AddScript adds all the data pushed in the script serialized as the passed
-// []byte to the list of entries to be included in the GCS filter when it's
-// built.
-func (b *GCSBuilder) AddScript(script []byte) *GCSBuilder {
-	// Do nothing if the builder's already errored out.
-	if b.err != nil {
-		return b
-	}
-
-	// Ignore errors and add pushed data, if any
-	data, _ := txscript.PushedData(script)
-	if len(data) == 0 {
-		return b
-	}
-
-	return b.AddEntries(data)
-}
-
 // AddWitness adds each item of the passed filter stack to the filter, and then
 // adds each item as a script.
 func (b *GCSBuilder) AddWitness(witness wire.TxWitness) *GCSBuilder {

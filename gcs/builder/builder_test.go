@@ -179,7 +179,7 @@ func TestUseBlockHash(t *testing.T) {
 	// works throughout all functions that use it.
 	b = builder.WithRandomKeyPM(33, 99).SetKeyFromHash(hash).SetKey(testKey)
 	b.SetP(30).AddEntry(hash.CloneBytes()).AddEntries(contents).
-		AddHash(hash).AddScript(addrBytes)
+		AddHash(hash).AddEntry(addrBytes)
 	_, err = b.Key()
 	if err != gcs.ErrPTooBig {
 		t.Fatalf("No error on P too big!")
@@ -270,7 +270,7 @@ func BuilderTest(b *builder.GCSBuilder, hash *chainhash.Hash, p uint8,
 
 	// Check that adding duplicate items does not increase filter size.
 	originalSize := f.N()
-	b.AddScript(addrBytes)
+	b.AddEntry(addrBytes)
 	b.AddWitness(witness)
 	f, err = b.Build()
 	if err != nil {

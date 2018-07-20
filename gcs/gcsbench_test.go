@@ -15,7 +15,7 @@ import (
 
 func genRandFilterElements(numElements uint) ([][]byte, error) {
 	testContents := make([][]byte, numElements)
-	for i := range contents {
+	for i := range testContents {
 		randElem := make([]byte, 32)
 		if _, err := rand.Read(randElem); err != nil {
 			return nil, err
@@ -33,7 +33,6 @@ var (
 
 // BenchmarkGCSFilterBuild benchmarks building a filter.
 func BenchmarkGCSFilterBuild50000(b *testing.B) {
-	b.StopTimer()
 	var testKey [gcs.KeySize]byte
 	for i := 0; i < gcs.KeySize; i += 4 {
 		binary.BigEndian.PutUint32(testKey[i:], rand.Uint32())
@@ -44,7 +43,8 @@ func BenchmarkGCSFilterBuild50000(b *testing.B) {
 		b.Fatalf("unable to generate random item: %v", genErr)
 	}
 
-	b.StartTimer()
+	b.ReportAllocs()
+	b.ResetTimer()
 
 	var localFilter *gcs.Filter
 	for i := 0; i < b.N; i++ {
@@ -60,7 +60,6 @@ func BenchmarkGCSFilterBuild50000(b *testing.B) {
 
 // BenchmarkGCSFilterBuild benchmarks building a filter.
 func BenchmarkGCSFilterBuild100000(b *testing.B) {
-	b.StopTimer()
 	var testKey [gcs.KeySize]byte
 	for i := 0; i < gcs.KeySize; i += 4 {
 		binary.BigEndian.PutUint32(testKey[i:], rand.Uint32())
@@ -71,7 +70,8 @@ func BenchmarkGCSFilterBuild100000(b *testing.B) {
 		b.Fatalf("unable to generate random item: %v", genErr)
 	}
 
-	b.StartTimer()
+	b.ReportAllocs()
+	b.ResetTimer()
 
 	var localFilter *gcs.Filter
 	for i := 0; i < b.N; i++ {
@@ -91,16 +91,15 @@ var (
 
 // BenchmarkGCSFilterMatch benchmarks querying a filter for a single value.
 func BenchmarkGCSFilterMatch(b *testing.B) {
-	b.StopTimer()
 	filter, err := gcs.BuildGCSFilter(P, M, key, contents)
 	if err != nil {
 		b.Fatalf("Failed to build filter")
 	}
-	b.StartTimer()
 
-	var (
-		localMatch bool
-	)
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	var localMatch bool
 	for i := 0; i < b.N; i++ {
 		localMatch, err = filter.Match(key, []byte("Nate"))
 		if err != nil {
@@ -115,24 +114,121 @@ func BenchmarkGCSFilterMatch(b *testing.B) {
 	match = localMatch
 }
 
-// BenchmarkGCSFilterMatchAny benchmarks querying a filter for a list of
-// values.
-func BenchmarkGCSFilterMatchAny(b *testing.B) {
-	b.StopTimer()
-	filter, err := gcs.BuildGCSFilter(P, M, key, contents)
-	if err != nil {
-		b.Fatalf("Failed to build filter")
-	}
-	b.StartTimer()
+var (
+	randElems1, _        = genRandFilterElements(1)
+	randElems10, _       = genRandFilterElements(10)
+	randElems100, _      = genRandFilterElements(100)
+	randElems1000, _     = genRandFilterElements(1000)
+	randElems10000, _    = genRandFilterElements(10000)
+	randElems100000, _   = genRandFilterElements(100000)
+	randElems1000000, _  = genRandFilterElements(1000000)
+	randElems10000000, _ = genRandFilterElements(10000000)
 
-	var (
-		localMatch bool
-	)
-	for i := 0; i < b.N; i++ {
-		localMatch, err = filter.MatchAny(key, contents2)
-		if err != nil {
-			b.Fatalf("unable to match filter: %v", err)
-		}
+	filterElems1000, _  = genRandFilterElements(1000)
+	filter1000, _       = gcs.BuildGCSFilter(P, M, key, filterElems1000)
+	filterElems5000, _  = genRandFilterElements(5000)
+	filter5000, _       = gcs.BuildGCSFilter(P, M, key, filterElems5000)
+	filterElems10000, _ = genRandFilterElements(10000)
+	filter10000, _      = gcs.BuildGCSFilter(P, M, key, filterElems10000)
+)
+
+// matchAnyBenchmarks contains combinations of random filters and queries used
+// to measure performance of various MatchAny implementations.
+var matchAnyBenchmarks = []struct {
+	name   string
+	query  [][]byte
+	filter *gcs.Filter
+}{
+	{"q100-f1K", randElems100, filter1000},
+	{"q1K-f1K", randElems1000, filter1000},
+	{"q10K-f1K", randElems10000, filter1000},
+	{"q100K-f1K", randElems100000, filter1000},
+	{"q1M-f1K", randElems1000000, filter1000},
+	{"q10M-f1K", randElems10000000, filter1000},
+
+	{"q100-f5K", randElems100, filter5000},
+	{"q1K-f5K", randElems1000, filter5000},
+	{"q10K-f5K", randElems10000, filter5000},
+	{"q100K-f5K", randElems100000, filter5000},
+	{"q1M-f5K", randElems1000000, filter5000},
+	{"q10M-f5K", randElems10000000, filter5000},
+
+	{"q100-f10K", randElems100, filter10000},
+	{"q1K-f10K", randElems1000, filter10000},
+	{"q10K-f10K", randElems10000, filter10000},
+	{"q100K-f10K", randElems100000, filter10000},
+	{"q1M-f10K", randElems1000000, filter10000},
+	{"q10M-f10K", randElems10000000, filter10000},
+}
+
+// BenchmarkGCSFilterMatchAny benchmarks the sort-and-zip MatchAny impl.
+func BenchmarkGCSFilterZipMatchAny(b *testing.B) {
+	for _, test := range matchAnyBenchmarks {
+		b.Run(test.name, func(b *testing.B) {
+			b.ReportAllocs()
+
+			var (
+				localMatch bool
+				err        error
+			)
+
+			for i := 0; i < b.N; i++ {
+				localMatch, err = test.filter.ZipMatchAny(
+					key, test.query,
+				)
+				if err != nil {
+					b.Fatalf("unable to match filter: %v", err)
+				}
+			}
+			match = localMatch
+		})
 	}
-	match = localMatch
+}
+
+// BenchmarkGCSFilterMatchAny benchmarks the hash-join MatchAny impl.
+func BenchmarkGCSFilterHashMatchAny(b *testing.B) {
+	for _, test := range matchAnyBenchmarks {
+		b.Run(test.name, func(b *testing.B) {
+			b.ReportAllocs()
+
+			var (
+				localMatch bool
+				err        error
+			)
+
+			for i := 0; i < b.N; i++ {
+				localMatch, err = test.filter.HashMatchAny(
+					key, test.query,
+				)
+				if err != nil {
+					b.Fatalf("unable to match filter: %v", err)
+				}
+			}
+			match = localMatch
+		})
+	}
+}
+
+// BenchmarkGCSFilterMatchAny benchmarks the hybrid MatchAny impl.
+func BenchmarkGCSFilterMatchAny(b *testing.B) {
+	for _, test := range matchAnyBenchmarks {
+		b.Run(test.name, func(b *testing.B) {
+			b.ReportAllocs()
+
+			var (
+				localMatch bool
+				err        error
+			)
+
+			for i := 0; i < b.N; i++ {
+				localMatch, err = test.filter.MatchAny(
+					key, test.query,
+				)
+				if err != nil {
+					b.Fatalf("unable to match filter: %v", err)
+				}
+			}
+			match = localMatch
+		})
+	}
 }

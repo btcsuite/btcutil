@@ -333,7 +333,25 @@ func (f *Filter) Match(key [KeySize]byte, data []byte) (bool, error) {
 // probability) to be a member of the set represented by the filter faster than
 // calling Match() for each value individually.
 func (f *Filter) MatchAny(key [KeySize]byte, data [][]byte) (bool, error) {
-	// Basic sanity check.
+	// TODO(conner): add real heuristics to query optimization
+	switch {
+
+	case len(data) >= int(f.N()/2):
+		return f.HashMatchAny(key, data)
+
+	default:
+		return f.ZipMatchAny(key, data)
+	}
+}
+
+// ZipMatchAny returns checks whether any []byte value is likely (within
+// collision probability) to be a member of the set represented by the filter
+// faster than calling Match() for each value individually.
+//
+// NOTE: This method should outperform HashMatchAny when the number of query
+// entries is smaller than the number of filter entries.
+func (f *Filter) ZipMatchAny(key [KeySize]byte, data [][]byte) (bool, error) {
+	// Basic anity check.
 	if len(data) == 0 {
 		return false, nil
 	}
@@ -400,6 +418,75 @@ func (f *Filter) MatchAny(key [KeySize]byte, data [][]byte) (bool, error) {
 	// If we've made it this far, an element matched between filters so we
 	// return true.
 	return true, nil
+}
+
+// HashMatchAny returns checks whether any []byte value is likely (within
+// collision probability) to be a member of the set represented by the filter
+// faster than calling Match() for each value individually.
+//
+// NOTE: This method should outperform MatchAny if the number of query entries
+// approaches the number of filter entries, len(data) >= f.N().
+func (f *Filter) HashMatchAny(key [KeySize]byte, data [][]byte) (bool, error) {
+	// Basic sanity check.
+	if len(data) == 0 {
+		return false, nil
+	}
+
+	// Create a filter bitstream.
+	filterData, err := f.Bytes()
+	if err != nil {
+		return false, err
+	}
+
+	b := bstream.NewBStreamReader(filterData)
+
+	var (
+		values    = make(map[uint32]struct{}, f.N())
+		lastValue uint64
+	)
+
+	// First, decompress the filter and construct an index of the keys
+	// contained within the filter. Index construction terminates after all
+	// values have been read from the bitstream.
+	for {
+		// Read the next diff value from the filter, add it to the
+		// last value, and set the new value in the index.
+		value, err := f.readFullUint64(b)
+		if err == nil {
+			lastValue += value
+			values[uint32(lastValue)] = struct{}{}
+			continue
+		} else if err == io.EOF {
+			break
+		}
+
+		return false, err
+	}
+
+	// We cache the high and low bits of modulusNP for the multiplication of
+	// 2 64-bit integers into a 128-bit integer.
+	nphi := f.modulusNP >> 32
+	nplo := uint64(uint32(f.modulusNP))
+
+	// Finally, run through the provided data items, querying the index to
+	// determine if the filter contains any elements of interest.
+	for _, d := range data {
+		// For each datum, we assign the initial hash to
+		// a uint64.
+		v := siphash.Sum64(d, &key)
+
+		// We'll then reduce the value down to the range
+		// of our modulus.
+		v = fastReduction(v, nphi, nplo)
+
+		if _, ok := values[uint32(v)]; !ok {
+			continue
+		}
+
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // readFullUint64 reads a value represented by the sum of a unary multiple of

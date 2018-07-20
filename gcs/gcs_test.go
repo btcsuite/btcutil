@@ -217,36 +217,71 @@ func TestGCSFilterMatch(t *testing.T) {
 	}
 }
 
-// TestGCSFilterMatchAny checks that both the built and copied filters match a
-// list correctly, logging any false positives without failing on them.
-func TestGCSFilterMatchAny(t *testing.T) {
-	match, err := filter.MatchAny(key, contents2)
-	if err != nil {
-		t.Fatalf("Filter match any failed: %s", err.Error())
+// AnyMatcher is the function signature of our matching algorithms.
+type AnyMatcher func(key [gcs.KeySize]byte, data [][]byte) (bool, error)
+
+// TestGCSFilterMatchAnySuite checks that all of our matching algorithms
+// properly match a list correctly when using built or copied filters, logging
+// any false positives without failing on them.
+func TestGCSFilterMatchAnySuite(t *testing.T) {
+	funcs := []struct {
+		name     string
+		matchAny func(*gcs.Filter) AnyMatcher
+	}{
+		{
+			"default",
+			func(f *gcs.Filter) AnyMatcher {
+				return f.MatchAny
+			},
+		},
+		{
+			"hash",
+			func(f *gcs.Filter) AnyMatcher {
+				return f.HashMatchAny
+			},
+		},
+		{
+			"zip",
+			func(f *gcs.Filter) AnyMatcher {
+				return f.ZipMatchAny
+			},
+		},
 	}
-	if match {
-		t.Logf("False positive match, should be 1 in 2**%d!", P)
-	}
-	match, err = filter2.MatchAny(key, contents2)
-	if err != nil {
-		t.Fatalf("Filter match any failed: %s", err.Error())
-	}
-	if match {
-		t.Logf("False positive match, should be 1 in 2**%d!", P)
-	}
-	contents2 = append(contents2, []byte("Nate"))
-	match, err = filter.MatchAny(key, contents2)
-	if err != nil {
-		t.Fatalf("Filter match any failed: %s", err.Error())
-	}
-	if !match {
-		t.Fatal("Filter didn't match any when it should have!")
-	}
-	match, err = filter2.MatchAny(key, contents2)
-	if err != nil {
-		t.Fatalf("Filter match any failed: %s", err.Error())
-	}
-	if !match {
-		t.Fatal("Filter didn't match any when it should have!")
+
+	for _, test := range funcs {
+		t.Run(test.name, func(t *testing.T) {
+			contentsCopy := make([][]byte, len(contents2))
+			copy(contentsCopy, contents2)
+
+			match, err := test.matchAny(filter)(key, contentsCopy)
+			if err != nil {
+				t.Fatalf("Filter match any failed: %s", err.Error())
+			}
+			if match {
+				t.Logf("False positive match, should be 1 in 2**%d!", P)
+			}
+			match, err = test.matchAny(filter2)(key, contentsCopy)
+			if err != nil {
+				t.Fatalf("Filter match any failed: %s", err.Error())
+			}
+			if match {
+				t.Logf("False positive match, should be 1 in 2**%d!", P)
+			}
+			contentsCopy = append(contentsCopy, []byte("Nate"))
+			match, err = test.matchAny(filter)(key, contentsCopy)
+			if err != nil {
+				t.Fatalf("Filter match any failed: %s", err.Error())
+			}
+			if !match {
+				t.Fatal("Filter didn't match any when it should have!")
+			}
+			match, err = test.matchAny(filter2)(key, contentsCopy)
+			if err != nil {
+				t.Fatalf("Filter match any failed: %s", err.Error())
+			}
+			if !match {
+				t.Fatal("Filter didn't match any when it should have!")
+			}
+		})
 	}
 }

@@ -430,3 +430,8 @@ func (f *Filter) readFullUint64(b *bstream.BStream) (uint64, error) {
 	v := (quotient << f.p) + remainder
 	return v, nil
 }
+
+// Size returns the Filter's size in bytes.
+func (f *Filter) Size() uint64 {
+	return uint64(len(f.filterData))
+}

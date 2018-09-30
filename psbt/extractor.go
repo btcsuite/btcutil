@@ -15,7 +15,7 @@ import (
 	"github.com/btcsuite/btcd/wire"
 )
 
-// Extractor takes a finalized psbt and outputs a network serialization
+// Extract takes a finalized psbt and outputs a network serialization
 func Extract(p *Psbt) ([]byte, error) {
 	if !p.IsComplete() {
 		return nil, ErrIncompletePSBT

@@ -2,8 +2,8 @@
 // Use of this source code is governed by an ISC
 // license that can be found in the LICENSE file.
 
-// An implementation of Partially Signed Bitcoin Transactions (PSBT).
-// The format is defined in BIP 174:
+// Package psbt is an implementation of Partially Signed Bitcoin
+// Transactions (PSBT). The format is defined in BIP 174:
 // https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
 package psbt
 
@@ -24,19 +24,19 @@ import (
 // BIP-174 aka PSBT defined values
 
 // Key types are currently encoded with single bytes
-type PsbtKeyType = uint8
+type psbtKeyType = uint8
 
-const PsbtMagicLength = 5
+const psbtMagicLength = 5
 
 var (
-	PsbtMagic = [PsbtMagicLength]byte{0x70,
+	psbtMagic = [psbtMagicLength]byte{0x70,
 		0x73, 0x62, 0x74, 0xff, // = "psbt" + 0xff sep
 	}
 )
 
-// Maximum possible value in any key-value pair is the largest
-// transaction serialization that could be passed in a NonWitnessUtxo
-// field. This is definitely less than 4M.
+// MaxPsbtValueLength is the size of the largest transaction serialization
+// that could be passed in a NonWitnessUtxo field. This is definitely
+//less than 4M.
 const MaxPsbtValueLength = 4000000
 
 // The below are the known key types as per the BIP.
@@ -44,23 +44,23 @@ const MaxPsbtValueLength = 4000000
 const (
 
 	// Global known key types
-	PsbtGlobalUnsignedTx PsbtKeyType = 0
+	PsbtGlobalUnsignedTx psbtKeyType = 0
 
 	// TxIn section known key types
-	PsbtInNonWitnessUtxo     PsbtKeyType = 0
-	PsbtInWitnessUtxo        PsbtKeyType = 1
-	PsbtInPartialSig         PsbtKeyType = 2
-	PsbtInSighashType        PsbtKeyType = 3
-	PsbtInRedeemScript       PsbtKeyType = 4
-	PsbtInWitnessScript      PsbtKeyType = 5
-	PsbtInBip32Derivation    PsbtKeyType = 6
-	PsbtInFinalScriptSig     PsbtKeyType = 7
-	PsbtInFinalScriptWitness PsbtKeyType = 8
+	PsbtInNonWitnessUtxo     psbtKeyType = 0
+	PsbtInWitnessUtxo        psbtKeyType = 1
+	PsbtInPartialSig         psbtKeyType = 2
+	PsbtInSighashType        psbtKeyType = 3
+	PsbtInRedeemScript       psbtKeyType = 4
+	PsbtInWitnessScript      psbtKeyType = 5
+	PsbtInBip32Derivation    psbtKeyType = 6
+	PsbtInFinalScriptSig     psbtKeyType = 7
+	PsbtInFinalScriptWitness psbtKeyType = 8
 
 	// TxOut section known key types
-	PsbtOutRedeemScript    PsbtKeyType = 0
-	PsbtOutWitnessScript   PsbtKeyType = 1
-	PsbtOutBip32Derivation PsbtKeyType = 2
+	PsbtOutRedeemScript    psbtKeyType = 0
+	PsbtOutWitnessScript   psbtKeyType = 1
+	PsbtOutBip32Derivation psbtKeyType = 2
 )
 
 var (
@@ -95,10 +95,11 @@ var (
 	ErrInvalidPrevOutNonWitnessTransaction = errors.New("Prevout hash does " +
 		"not match the provided non-witness utxo serialization")
 
-	// ErrInvalidSignature indicates that the signature the user is trying
-	// to append to the PSBT is invalid, either because it does not correspond
-	// to the previous transaction hash, or redeem script, or witness script.
-	// Note that this does not include ECDSA signature checking.
+	// ErrInvalidSignatureForInput indicates that the signature the user is
+	// trying to append to the PSBT is invalid, either because it does
+	// not correspond to the previous transaction hash, or redeem script,
+	// or witness script.
+	// NOTE this does not include ECDSA signature checking.
 	ErrInvalidSignatureForInput = errors.New("Signature does not correspond " +
 		"to this input")
 
@@ -136,7 +137,7 @@ func serializeKVpair(w io.Writer, key []byte, value []byte) error {
 	return nil
 }
 
-func serializeKVPairWithType(w io.Writer, kt PsbtKeyType, keydata []byte,
+func serializeKVPairWithType(w io.Writer, kt psbtKeyType, keydata []byte,
 	value []byte) error {
 	if keydata == nil {
 		keydata = []byte{}
@@ -192,18 +193,18 @@ func readTxOut(txout []byte) (*wire.TxOut, error) {
 	return wire.NewTxOut(int64(valueSer), scriptPubKey), nil
 }
 
-// PsbtPartialSig encapsulate a (BTC public key, ECDSA signature)
+// PartialSig encapsulate a (BTC public key, ECDSA signature)
 // pair, note that the fields are stored as byte slices, not
 // btcec.PublicKey or btcec.Signature (because manipulations will
 // be with the former not the latter, here); compliance with consensus
 // serialization is enforced with .checkValid()
-type PsbtPartialSig struct {
+type PartialSig struct {
 	PubKey    []byte
 	Signature []byte
 }
 
 // PartialSigSorter implements sort.Interface.
-type PartialSigSorter []*PsbtPartialSig
+type PartialSigSorter []*PartialSig
 
 func (s PartialSigSorter) Len() int { return len(s) }
 
@@ -235,28 +236,28 @@ func validateSignature(sig []byte) bool {
 	return true
 }
 
-// See above notes (PsbtPartialSig, validatePubkey, validateSignature).
+// See above notes (PartialSig, validatePubkey, validateSignature).
 // NOTE update for Schnorr will be needed here if/when that activates.
-func (ps *PsbtPartialSig) checkValid() bool {
+func (ps *PartialSig) checkValid() bool {
 	return validatePubkey(ps.PubKey) && validateSignature(ps.Signature)
 }
 
-// PsbtBip32Derivation encapsulates the data for the PsbtInBip32Derivation
-// and PsbtOutBip32Derivation key-value fields.
-type PsbtBip32Derivation struct {
+// Bip32Derivation encapsulates the data for the input and output
+// Bip32Derivation key-value fields.
+type Bip32Derivation struct {
 	PubKey               []byte
 	MasterKeyFingerprint uint32
 	Bip32Path            []uint32
 }
 
-// checkValid ensures that the PubKey in the PsbtBip32Derivation
+// checkValid ensures that the PubKey in the Bip32Derivation
 // struct is valid.
-func (pb *PsbtBip32Derivation) checkValid() bool {
+func (pb *Bip32Derivation) checkValid() bool {
 	return validatePubkey(pb.PubKey)
 }
 
 // Bip32Sorter implements sort.Interface.
-type Bip32Sorter []*PsbtBip32Derivation
+type Bip32Sorter []*Bip32Derivation
 
 func (s Bip32Sorter) Len() int { return len(s) }
 
@@ -302,50 +303,55 @@ func SerializeBIP32Derivation(masterKeyFingerprint uint32,
 	return derivationPath
 }
 
-// PsbtUnknown is a struct encapsulating a key-value pair for which
+// Unknown is a struct encapsulating a key-value pair for which
 // the key type is unknown by this package; these fields are allowed
 // in both the 'Global' and the 'Input' section of a PSBT.
-type PsbtUnknown struct {
+type Unknown struct {
 	key   []byte
 	value []byte
 }
 
-// PsbtInput is a struct encapsulating all the data that can be attached
+// PInput is a struct encapsulating all the data that can be attached
 // to any specific input of the PSBT.
-type PsbtInput struct {
+type PInput struct {
 	NonWitnessUtxo     *wire.MsgTx
 	WitnessUtxo        *wire.TxOut
-	PartialSigs        []*PsbtPartialSig
+	PartialSigs        []*PartialSig
 	SighashType        txscript.SigHashType
 	RedeemScript       []byte
 	WitnessScript      []byte
-	Bip32Derivation    []*PsbtBip32Derivation
+	Bip32Derivation    []*Bip32Derivation
 	FinalScriptSig     []byte
 	FinalScriptWitness []byte
-	Unknown            []*PsbtUnknown
+	Unknowns           []*Unknown
 }
 
+// NewPsbtInput creates an instance of PsbtInput given either a
+// nonWitnessUtxo or a witnessUtxo.
+// NOTE only one of the two arguments should be specified, with the other
+// being `nil`; otherwise the created PsbtInput object will fail IsSane()
+// checks and will not be usable.
 func NewPsbtInput(nonWitnessUtxo *wire.MsgTx,
-	witnessUtxo *wire.TxOut) *PsbtInput {
-	return &PsbtInput{
+	witnessUtxo *wire.TxOut) *PInput {
+	return &PInput{
 		NonWitnessUtxo:     nonWitnessUtxo,
 		WitnessUtxo:        witnessUtxo,
-		PartialSigs:        []*PsbtPartialSig{},
+		PartialSigs:        []*PartialSig{},
 		SighashType:        0,
 		RedeemScript:       nil,
 		WitnessScript:      nil,
-		Bip32Derivation:    []*PsbtBip32Derivation{},
+		Bip32Derivation:    []*Bip32Derivation{},
 		FinalScriptSig:     nil,
 		FinalScriptWitness: nil,
-		Unknown:            nil,
+		Unknowns:           nil,
 	}
 }
 
 // IsSane returns true only if there are no conflicting
-// values in the PsbtInput. It checks that witness and non-witness
+// values in the Psbt PInput. It checks that witness and non-witness
 // utxo entries do not both exist, and that witnessScript entries are only
 // added to witness inputs.
-func (pi *PsbtInput) IsSane() bool {
+func (pi *PInput) IsSane() bool {
 
 	if pi.NonWitnessUtxo != nil && pi.WitnessUtxo != nil {
 		return false
@@ -360,7 +366,7 @@ func (pi *PsbtInput) IsSane() bool {
 	return true
 }
 
-func (pi *PsbtInput) Deserialize(r io.Reader) error {
+func (pi *PInput) deserialize(r io.Reader) error {
 	for {
 		keyint, keydata, err := getKey(r)
 		if err != nil {
@@ -405,7 +411,7 @@ func (pi *PsbtInput) Deserialize(r io.Reader) error {
 			pi.WitnessUtxo = txout
 
 		case PsbtInPartialSig:
-			newPartialSig := PsbtPartialSig{PubKey: keydata,
+			newPartialSig := PartialSig{PubKey: keydata,
 				Signature: value}
 			if !newPartialSig.checkValid() {
 				return ErrInvalidPsbtFormat
@@ -449,7 +455,7 @@ func (pi *PsbtInput) Deserialize(r io.Reader) error {
 				return err
 			}
 			pi.Bip32Derivation = append(pi.Bip32Derivation,
-				&PsbtBip32Derivation{
+				&Bip32Derivation{
 					PubKey:               keydata,
 					MasterKeyFingerprint: master,
 					Bip32Path:            derivationPath,
@@ -476,17 +482,17 @@ func (pi *PsbtInput) Deserialize(r io.Reader) error {
 		default:
 			keyintanddata := []byte{byte(keyint)}
 			keyintanddata = append(keyintanddata, keydata...)
-			newUnknown := &PsbtUnknown{
+			newUnknown := &Unknown{
 				key:   keyintanddata,
 				value: value,
 			}
-			pi.Unknown = append(pi.Unknown, newUnknown)
+			pi.Unknowns = append(pi.Unknowns, newUnknown)
 		}
 	}
 	return nil
 }
 
-func (pi *PsbtInput) Serialize(w io.Writer) error {
+func (pi *PInput) serialize(w io.Writer) error {
 
 	if !pi.IsSane() {
 		return ErrInvalidPsbtFormat
@@ -582,7 +588,7 @@ func (pi *PsbtInput) Serialize(w io.Writer) error {
 
 	// Unknown is a special case; we don't have a key type, only
 	// a key and a value field
-	for _, kv := range pi.Unknown {
+	for _, kv := range pi.Unknowns {
 		err := serializeKVpair(w, kv.key, kv.value)
 		if err != nil {
 			return err
@@ -592,24 +598,27 @@ func (pi *PsbtInput) Serialize(w io.Writer) error {
 	return nil
 }
 
-// PsbtOutput is a struct encapsulating all the data that can be attached
+// POutput is a struct encapsulating all the data that can be attached
 // to any specific output of the PSBT.
-type PsbtOutput struct {
+type POutput struct {
 	RedeemScript    []byte
 	WitnessScript   []byte
-	Bip32Derivation []*PsbtBip32Derivation
+	Bip32Derivation []*Bip32Derivation
 }
 
+// NewPsbtOutput creates an instance of PsbtOutput; the three parameters
+// redeemScript, witnessScript and Bip32Derivation are all allowed to be
+// `nil`.
 func NewPsbtOutput(redeemScript []byte, witnessScript []byte,
-	bip32Derivation []*PsbtBip32Derivation) *PsbtOutput {
-	return &PsbtOutput{
+	bip32Derivation []*Bip32Derivation) *POutput {
+	return &POutput{
 		RedeemScript:    redeemScript,
 		WitnessScript:   witnessScript,
 		Bip32Derivation: bip32Derivation,
 	}
 }
 
-func (po *PsbtOutput) Deserialize(r io.Reader) error {
+func (po *POutput) deserialize(r io.Reader) error {
 	for {
 		keyint, keydata, err := getKey(r)
 		if err != nil {
@@ -654,7 +663,7 @@ func (po *PsbtOutput) Deserialize(r io.Reader) error {
 				return err
 			}
 			po.Bip32Derivation = append(po.Bip32Derivation,
-				&PsbtBip32Derivation{
+				&Bip32Derivation{
 					PubKey:               keydata,
 					MasterKeyFingerprint: master,
 					Bip32Path:            derivationPath,
@@ -668,7 +677,7 @@ func (po *PsbtOutput) Deserialize(r io.Reader) error {
 	return nil
 }
 
-func (po *PsbtOutput) Serialize(w io.Writer) error {
+func (po *POutput) serialize(w io.Writer) error {
 	if po.RedeemScript != nil {
 		err := serializeKVPairWithType(w, PsbtOutRedeemScript, nil,
 			po.RedeemScript)
@@ -702,9 +711,9 @@ func (po *PsbtOutput) Serialize(w io.Writer) error {
 // key derivations and other transaction-defining data.
 type Psbt struct {
 	UnsignedTx *wire.MsgTx // Deserialization of unsigned tx
-	Inputs     []PsbtInput
-	Outputs    []PsbtOutput
-	Unknowns   []PsbtUnknown // Data of unknown type at global scope
+	Inputs     []PInput
+	Outputs    []POutput
+	Unknowns   []Unknown // Data of unknown type at global scope
 }
 
 // validateUnsignedTx returns true if the transaction is unsigned.
@@ -728,9 +737,9 @@ func NewPsbtFromUnsignedTx(tx *wire.MsgTx) (*Psbt, error) {
 		return nil, ErrInvalidRawTxSigned
 	}
 
-	inSlice := make([]PsbtInput, len(tx.TxIn))
-	outSlice := make([]PsbtOutput, len(tx.TxOut))
-	unknownSlice := make([]PsbtUnknown, 0)
+	inSlice := make([]PInput, len(tx.TxIn))
+	outSlice := make([]POutput, len(tx.TxOut))
+	unknownSlice := make([]Unknown, 0)
 
 	retPsbt := Psbt{
 		UnsignedTx: tx,
@@ -766,7 +775,7 @@ func NewPsbt(psbtBytes []byte, b64 bool) (*Psbt, error) {
 	if _, err = io.ReadFull(r, magic[:]); err != nil {
 		return nil, err
 	}
-	if magic != PsbtMagic {
+	if magic != psbtMagic {
 		return nil, ErrInvalidMagicBytes
 	}
 
@@ -798,7 +807,7 @@ func NewPsbt(psbtBytes []byte, b64 bool) (*Psbt, error) {
 	}
 
 	// parse any unknowns that may be present, break at separator
-	unknownSlice := make([]PsbtUnknown, 0)
+	unknownSlice := make([]Unknown, 0)
 	for {
 		keyint, keydata, err := getKey(r)
 		if err != nil {
@@ -814,18 +823,18 @@ func NewPsbt(psbtBytes []byte, b64 bool) (*Psbt, error) {
 		}
 		keyintanddata := []byte{byte(keyint)}
 		keyintanddata = append(keyintanddata, keydata...)
-		newUnknown := PsbtUnknown{
+		newUnknown := Unknown{
 			key:   keyintanddata,
 			value: value,
 		}
 		unknownSlice = append(unknownSlice, newUnknown)
 	}
 	// Next we parse the INPUT section
-	inSlice := make([]PsbtInput, len(msgTx.TxIn))
+	inSlice := make([]PInput, len(msgTx.TxIn))
 
-	for i, _ := range msgTx.TxIn {
-		input := PsbtInput{}
-		err = input.Deserialize(r)
+	for i := range msgTx.TxIn {
+		input := PInput{}
+		err = input.deserialize(r)
 		if err != nil {
 			return nil, err
 		}
@@ -833,11 +842,11 @@ func NewPsbt(psbtBytes []byte, b64 bool) (*Psbt, error) {
 	}
 
 	//Next we parse the OUTPUT section
-	outSlice := make([]PsbtOutput, len(msgTx.TxOut))
+	outSlice := make([]POutput, len(msgTx.TxOut))
 
-	for i, _ := range msgTx.TxOut {
-		output := PsbtOutput{}
-		err = output.Deserialize(r)
+	for i := range msgTx.TxOut {
+		output := POutput{}
+		err = output.deserialize(r)
 		if err != nil {
 			return nil, err
 		}
@@ -866,7 +875,7 @@ func NewPsbt(psbtBytes []byte, b64 bool) (*Psbt, error) {
 func (p *Psbt) Serialize() ([]byte, error) {
 
 	serPsbt := []byte{}
-	serPsbt = append(serPsbt, PsbtMagic[:]...)
+	serPsbt = append(serPsbt, psbtMagic[:]...)
 
 	// Create serialization of unsignedtx
 	serializedTx := bytes.NewBuffer(make([]byte, 0,
@@ -885,7 +894,7 @@ func (p *Psbt) Serialize() ([]byte, error) {
 
 	for _, pInput := range p.Inputs {
 		var buf bytes.Buffer
-		err := pInput.Serialize(&buf)
+		err := pInput.serialize(&buf)
 		if err != nil {
 			return nil, err
 		}
@@ -895,7 +904,7 @@ func (p *Psbt) Serialize() ([]byte, error) {
 
 	for _, pOutput := range p.Outputs {
 		var buf bytes.Buffer
-		err := pOutput.Serialize(&buf)
+		err := pOutput.serialize(&buf)
 		if err != nil {
 			return nil, err
 		}

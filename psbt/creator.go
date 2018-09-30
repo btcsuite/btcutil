@@ -13,8 +13,8 @@ import (
 	"github.com/btcsuite/btcd/wire"
 )
 
-// PsbtCreator holds a reference to a created Psbt struct.
-type PsbtCreator struct {
+// Creator holds a reference to a created Psbt struct.
+type Creator struct {
 	Cpsbt *Psbt
 }
 
@@ -25,7 +25,7 @@ type PsbtCreator struct {
 // information. The values of nLockTime, nSequence (per input) and
 // transaction version (must be 1 of 2) must be specified here. Note
 // that the default nSequence value is wire.MaxTxInSequenceNum.
-func (c *PsbtCreator) createPsbt(inputs []*wire.OutPoint,
+func (c *Creator) createPsbt(inputs []*wire.OutPoint,
 	outputs []*wire.TxOut, Version int32, nLockTime uint32,
 	nSequences []uint32) error {
 	// Create the new struct; the input and output lists will be empty,
@@ -55,8 +55,8 @@ func (c *PsbtCreator) createPsbt(inputs []*wire.OutPoint,
 	// The input and output lists are empty, but there is a list of those
 	// two lists, and each one must be of length matching the unsigned
 	// transaction; the unknown list can be nil.
-	pInputs := make([]PsbtInput, len(unsignedTx.TxIn))
-	pOutputs := make([]PsbtOutput, len(unsignedTx.TxOut))
+	pInputs := make([]PInput, len(unsignedTx.TxIn))
+	pOutputs := make([]POutput, len(unsignedTx.TxOut))
 	c.Cpsbt = &Psbt{
 		UnsignedTx: unsignedTx,
 		Inputs:     pInputs,

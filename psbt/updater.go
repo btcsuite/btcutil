@@ -19,21 +19,21 @@ import (
 	"github.com/btcsuite/btcutil"
 )
 
-// PsbtUpdater encapsulates the role 'Updater'
+// Updater encapsulates the role 'Updater'
 // as specified in BIP174; it accepts Psbt structs
 // and has methods to add fields to the inputs and outputs.
-type PsbtUpdater struct {
+type Updater struct {
 	Upsbt *Psbt
 }
 
 // NewUpdater returns a new instance of PsbtUpdater,
 // if the passed Psbt struct is in a valid form,
 // else an error.
-func NewUpdater(p *Psbt) (*PsbtUpdater, error) {
+func NewUpdater(p *Psbt) (*Updater, error) {
 	if err := p.SanityCheck(); err != nil {
 		return nil, err
 	}
-	return &PsbtUpdater{Upsbt: p}, nil
+	return &Updater{Upsbt: p}, nil
 
 }
 
@@ -42,7 +42,7 @@ func NewUpdater(p *Psbt) (*PsbtUpdater, error) {
 // (which is the source of the corresponding prevOut), and the input
 // index. If addition of this key-value pair to the Psbt fails, an
 // error is returned.
-func (p *PsbtUpdater) AddInNonWitnessUtxo(tx *wire.MsgTx, inIndex int) error {
+func (p *Updater) AddInNonWitnessUtxo(tx *wire.MsgTx, inIndex int) error {
 	if inIndex > len(p.Upsbt.Inputs)-1 {
 		return ErrInvalidPrevOutNonWitnessTransaction
 	}
@@ -59,7 +59,7 @@ func (p *PsbtUpdater) AddInNonWitnessUtxo(tx *wire.MsgTx, inIndex int) error {
 // transaction because BIP143 means the output information is sufficient,
 // and the input index. If addition of this key-value pair to the Psbt fails,
 // an error is returned.
-func (p *PsbtUpdater) AddInWitnessUtxo(txout *wire.TxOut, inIndex int) error {
+func (p *Updater) AddInWitnessUtxo(txout *wire.TxOut, inIndex int) error {
 	if inIndex > len(p.Upsbt.Inputs)-1 {
 		return ErrInvalidPsbtFormat
 	}
@@ -78,10 +78,10 @@ func (p *PsbtUpdater) AddInWitnessUtxo(txout *wire.TxOut, inIndex int) error {
 // on signing rules explained in the BIP under `Signer`; if the rules are not
 // satisfied, an ErrInvalidSignatureForInput is returned.
 // NOTE this function does *not* validate the ECDSA signature itself.
-func (p *PsbtUpdater) AddPartialSignature(inIndex int, sig []byte,
+func (p *Updater) AddPartialSignature(inIndex int, sig []byte,
 	pubkey []byte) error {
 
-	partialSig := PsbtPartialSig{PubKey: pubkey, Signature: sig}
+	partialSig := PartialSig{PubKey: pubkey, Signature: sig}
 	//First validate the passed (sig, pub):
 	if !partialSig.checkValid() {
 		return ErrInvalidPsbtFormat
@@ -179,7 +179,7 @@ func (p *PsbtUpdater) AddPartialSignature(inIndex int, sig []byte,
 // The sighash type is passed as a 32 bit unsigned integer, along with the
 // index for the input. An error is returned if addition of this key-value pair
 // to the Psbt fails.
-func (p *PsbtUpdater) AddInSighashType(sighashType txscript.SigHashType,
+func (p *Updater) AddInSighashType(sighashType txscript.SigHashType,
 	inIndex int) error {
 	p.Upsbt.Inputs[inIndex].SighashType = sighashType
 	if err := p.Upsbt.SanityCheck(); err != nil {
@@ -192,7 +192,7 @@ func (p *PsbtUpdater) AddInSighashType(sighashType txscript.SigHashType,
 // The redeem script is passed serialized, as a byte slice, along with the
 // index of the input. An error is returned if addition of this key-value pair
 // to the Psbt fails.
-func (p *PsbtUpdater) AddInRedeemScript(redeemScript []byte,
+func (p *Updater) AddInRedeemScript(redeemScript []byte,
 	inIndex int) error {
 	p.Upsbt.Inputs[inIndex].RedeemScript = redeemScript
 	if err := p.Upsbt.SanityCheck(); err != nil {
@@ -205,7 +205,7 @@ func (p *PsbtUpdater) AddInRedeemScript(redeemScript []byte,
 // The witness script is passed serialized, as a byte slice, along with the
 // index of the input. An error is returned if addition of this key-value pair
 // to the Psbt fails.
-func (p *PsbtUpdater) AddInWitnessScript(witnessScript []byte,
+func (p *Updater) AddInWitnessScript(witnessScript []byte,
 	inIndex int) error {
 	p.Upsbt.Inputs[inIndex].WitnessScript = witnessScript
 	if err := p.Upsbt.SanityCheck(); err != nil {
@@ -221,9 +221,9 @@ func (p *PsbtUpdater) AddInWitnessScript(witnessScript []byte,
 // NOTE that this can be called multiple times for the same input.
 // An error is returned if addition of this key-value pair
 // to the Psbt fails.
-func (p *PsbtUpdater) AddInBip32Derivation(masterKeyFingerprint uint32,
+func (p *Updater) AddInBip32Derivation(masterKeyFingerprint uint32,
 	bip32Path []uint32, pubKeyData []byte, inIndex int) error {
-	bip32Derivation := PsbtBip32Derivation{
+	bip32Derivation := Bip32Derivation{
 		PubKey:               pubKeyData,
 		MasterKeyFingerprint: masterKeyFingerprint,
 		Bip32Path:            bip32Path,
@@ -246,9 +246,9 @@ func (p *PsbtUpdater) AddInBip32Derivation(masterKeyFingerprint uint32,
 // NOTE that this can be called multiple times for the same output.
 // An error is returned if addition of this key-value pair
 // to the Psbt fails.
-func (p *PsbtUpdater) AddOutBip32Derivation(masterKeyFingerprint uint32,
+func (p *Updater) AddOutBip32Derivation(masterKeyFingerprint uint32,
 	bip32Path []uint32, pubKeyData []byte, outIndex int) error {
-	bip32Derivation := PsbtBip32Derivation{
+	bip32Derivation := Bip32Derivation{
 		PubKey:               pubKeyData,
 		MasterKeyFingerprint: masterKeyFingerprint,
 		Bip32Path:            bip32Path,
@@ -264,7 +264,9 @@ func (p *PsbtUpdater) AddOutBip32Derivation(masterKeyFingerprint uint32,
 	return nil
 }
 
-func (p *PsbtUpdater) AddOutRedeemScript(redeemScript []byte,
+// AddOutRedeemScript takes a redeem script as a byte slice
+// and appends it to the output at index outIndex.
+func (p *Updater) AddOutRedeemScript(redeemScript []byte,
 	outIndex int) error {
 	p.Upsbt.Outputs[outIndex].RedeemScript = redeemScript
 	if err := p.Upsbt.SanityCheck(); err != nil {
@@ -273,7 +275,9 @@ func (p *PsbtUpdater) AddOutRedeemScript(redeemScript []byte,
 	return nil
 }
 
-func (p *PsbtUpdater) AddOutWitnessScript(witnessScript []byte,
+// AddOutWitnessScript takes a witness script as a byte slice
+// and appends it to the output at index outIndex.
+func (p *Updater) AddOutWitnessScript(witnessScript []byte,
 	outIndex int) error {
 	p.Upsbt.Outputs[outIndex].WitnessScript = witnessScript
 	if err := p.Upsbt.SanityCheck(); err != nil {

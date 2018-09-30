@@ -314,7 +314,7 @@ func TestPsbtCreator(t *testing.T) {
 	}
 	prevOut2 := wire.NewOutPoint(hash2, uint32(1))
 	inputs := []*wire.OutPoint{prevOut1, prevOut2}
-	creator := PsbtCreator{}
+	creator := Creator{}
 	// Check creation fails with invalid sequences:
 	nSequences := []uint32{wire.MaxTxInSequenceNum}
 	err = creator.createPsbt(inputs, outputs, int32(3), uint32(0), nSequences)
@@ -535,7 +535,7 @@ func TestPsbtSigner(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to parse PSBT: %v", err)
 	}
-	psbtUpdater1 := PsbtUpdater{
+	psbtUpdater1 := Updater{
 		Upsbt: psbt1,
 	}
 	sig1, err := hex.DecodeString("3044022074018ad4180097b873323c0015720b3684cc8123891048e7dbcd9b55ad679c99022073d369b740e3eb53dcefa33823c8070514ca55a7dd9544f157c167913261118c01")
@@ -585,7 +585,7 @@ func TestPsbtExtractor(t *testing.T) {
 		t.Fatalf("Failed to parse PSBT: %v", err)
 	}
 
-	for i, _ := range psbt1.Inputs {
+	for i := range psbt1.Inputs {
 		err = Finalize(psbt1, i)
 		if err != nil {
 			t.Fatalf("Error from finalizing PSBT: %v", err)
@@ -654,7 +654,7 @@ func TestImportFromCore1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error deserializing transaction: %v", err)
 	}
-	psbtupdater1 := PsbtUpdater{Upsbt: psbt1}
+	psbtupdater1 := Updater{Upsbt: psbt1}
 	psbtupdater1.AddInWitnessUtxo(txFund1Out, 0)
 	err = psbtupdater1.AddInNonWitnessUtxo(txFund2, 1)
 	if err != nil {
@@ -799,7 +799,7 @@ func TestImportFromCore2(t *testing.T) {
 	// First input is witness, take correct output:
 	txFund1Out := txFund1.TxOut[1]
 
-	psbtupdater1 := PsbtUpdater{Upsbt: psbt1}
+	psbtupdater1 := Updater{Upsbt: psbt1}
 	psbtupdater1.AddInWitnessUtxo(txFund1Out, 0)
 
 	// This input is p2sh-p2wpkh, so it requires a redeemscript but not
@@ -974,7 +974,7 @@ func TestMaybeFinalizeAll(t *testing.T) {
 		t.Fatalf("Unable to decode hex: %v", err)
 	}
 
-	psbtupdater1 := PsbtUpdater{Upsbt: psbt1}
+	psbtupdater1 := Updater{Upsbt: psbt1}
 	tx := wire.NewMsgTx(2)
 	err = tx.Deserialize(bytes.NewReader(fundingTxInput1))
 	if err != nil {

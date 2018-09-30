@@ -123,7 +123,7 @@ func getMultisigScriptWitness(witnessScript []byte, pubKeys [][]byte,
 // of the PSBT, and returns true if they match, false otherwise.
 // If no SighashType field exists, it is assumed to be SIGHASH_ALL.
 // TODO sighash type not restricted to one byte in future?
-func checkSigHashFlags(sig []byte, input *PsbtInput) bool {
+func checkSigHashFlags(sig []byte, input *PInput) bool {
 	expectedSighashType := txscript.SigHashAll
 	if input.SighashType != 0 {
 		expectedSighashType = input.SighashType
@@ -191,7 +191,7 @@ func MaybeFinalize(p *Psbt, idx int, addrType string) (bool, error) {
 // TODO only to be used for p2wpkh inputs currently; otherwise call
 // Finalize on a per-input basis.
 func MaybeFinalizeAll(p *Psbt) error {
-	for i, _ := range p.UnsignedTx.TxIn {
+	for i := range p.UnsignedTx.TxIn {
 		success, err := MaybeFinalize(p, i, "p2wpkh")
 		if err != nil || !success {
 			return err

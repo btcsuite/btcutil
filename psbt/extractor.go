@@ -26,7 +26,7 @@ func Extract(p *Psbt) ([]byte, error) {
 	// for us.
 	newTx := p.UnsignedTx.Copy()
 	for i, tin := range newTx.TxIn {
-		pInput := &(*p.Inputs)[i]
+		pInput := p.Inputs[i]
 		if pInput.FinalScriptSig != nil {
 			tin.SignatureScript = pInput.FinalScriptSig
 		}

@@ -48,15 +48,11 @@ func (c *PsbtCreator) createPsbt(inputs []*wire.OutPoint,
 	pOutputs := make([]PsbtOutput, len(unsignedTx.TxOut))
 	c.Cpsbt = &Psbt{
 		UnsignedTx: unsignedTx,
-		Inputs:     &pInputs,
-		Outputs:    &pOutputs,
+		Inputs:     pInputs,
+		Outputs:    pOutputs,
 		Unknowns:   nil,
 	}
 
-	// This will populate the `Raw` element of the Psbt struct.
-	if err := c.Cpsbt.Serialize(); err != nil {
-		return err
-	}
 	// This new Psbt is "raw" and contains no key-value fields,
 	// so sanity checking with c.Cpsbt.SanityCheck() is not required.
 	return nil

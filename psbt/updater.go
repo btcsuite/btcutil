@@ -43,10 +43,10 @@ func NewUpdater(p *Psbt) (*PsbtUpdater, error) {
 // index. If addition of this key-value pair to the Psbt fails, an
 // error is returned.
 func (p *PsbtUpdater) AddInNonWitnessUtxo(tx *wire.MsgTx, inIndex int) error {
-	if inIndex > len((*p.Upsbt.Inputs))-1 {
+	if inIndex > len(p.Upsbt.Inputs)-1 {
 		return ErrInvalidPrevOutNonWitnessTransaction
 	}
-	(*p.Upsbt.Inputs)[inIndex].NonWitnessUtxo = tx
+	p.Upsbt.Inputs[inIndex].NonWitnessUtxo = tx
 	if err := p.Upsbt.SanityCheck(); err != nil {
 		return ErrInvalidPsbtFormat
 	}
@@ -60,10 +60,10 @@ func (p *PsbtUpdater) AddInNonWitnessUtxo(tx *wire.MsgTx, inIndex int) error {
 // and the input index. If addition of this key-value pair to the Psbt fails,
 // an error is returned.
 func (p *PsbtUpdater) AddInWitnessUtxo(txout *wire.TxOut, inIndex int) error {
-	if inIndex > len((*p.Upsbt.Inputs))-1 {
+	if inIndex > len(p.Upsbt.Inputs)-1 {
 		return ErrInvalidPsbtFormat
 	}
-	(*p.Upsbt.Inputs)[inIndex].WitnessUtxo = txout
+	p.Upsbt.Inputs[inIndex].WitnessUtxo = txout
 	if err := p.Upsbt.SanityCheck(); err != nil {
 		return ErrInvalidPsbtFormat
 	}
@@ -87,7 +87,7 @@ func (p *PsbtUpdater) AddPartialSignature(inIndex int, sig []byte,
 		return ErrInvalidPsbtFormat
 	}
 
-	pInput := (*p.Upsbt.Inputs)[inIndex]
+	pInput := p.Upsbt.Inputs[inIndex]
 
 	// Sanity checks
 	if pInput.NonWitnessUtxo != nil {
@@ -164,8 +164,8 @@ func (p *PsbtUpdater) AddPartialSignature(inIndex int, sig []byte,
 		return ErrInvalidPsbtFormat
 	}
 
-	(*p.Upsbt.Inputs)[inIndex].PartialSigs = append(
-		(*p.Upsbt.Inputs)[inIndex].PartialSigs, &partialSig)
+	p.Upsbt.Inputs[inIndex].PartialSigs = append(
+		p.Upsbt.Inputs[inIndex].PartialSigs, &partialSig)
 
 	if err := p.Upsbt.SanityCheck(); err != nil {
 		return err
@@ -181,7 +181,7 @@ func (p *PsbtUpdater) AddPartialSignature(inIndex int, sig []byte,
 // to the Psbt fails.
 func (p *PsbtUpdater) AddInSighashType(sighashType txscript.SigHashType,
 	inIndex int) error {
-	(*p.Upsbt.Inputs)[inIndex].SighashType = sighashType
+	p.Upsbt.Inputs[inIndex].SighashType = sighashType
 	if err := p.Upsbt.SanityCheck(); err != nil {
 		return err
 	}
@@ -194,7 +194,7 @@ func (p *PsbtUpdater) AddInSighashType(sighashType txscript.SigHashType,
 // to the Psbt fails.
 func (p *PsbtUpdater) AddInRedeemScript(redeemScript []byte,
 	inIndex int) error {
-	(*p.Upsbt.Inputs)[inIndex].RedeemScript = redeemScript
+	p.Upsbt.Inputs[inIndex].RedeemScript = redeemScript
 	if err := p.Upsbt.SanityCheck(); err != nil {
 		return ErrInvalidPsbtFormat
 	}
@@ -207,7 +207,7 @@ func (p *PsbtUpdater) AddInRedeemScript(redeemScript []byte,
 // to the Psbt fails.
 func (p *PsbtUpdater) AddInWitnessScript(witnessScript []byte,
 	inIndex int) error {
-	(*p.Upsbt.Inputs)[inIndex].WitnessScript = witnessScript
+	p.Upsbt.Inputs[inIndex].WitnessScript = witnessScript
 	if err := p.Upsbt.SanityCheck(); err != nil {
 		return err
 	}
@@ -231,8 +231,8 @@ func (p *PsbtUpdater) AddInBip32Derivation(masterKeyFingerprint uint32,
 	if !bip32Derivation.checkValid() {
 		return ErrInvalidPsbtFormat
 	}
-	(*p.Upsbt.Inputs)[inIndex].Bip32Derivation = append(
-		(*p.Upsbt.Inputs)[inIndex].Bip32Derivation, &bip32Derivation)
+	p.Upsbt.Inputs[inIndex].Bip32Derivation = append(
+		p.Upsbt.Inputs[inIndex].Bip32Derivation, &bip32Derivation)
 	if err := p.Upsbt.SanityCheck(); err != nil {
 		return err
 	}
@@ -256,8 +256,8 @@ func (p *PsbtUpdater) AddOutBip32Derivation(masterKeyFingerprint uint32,
 	if !bip32Derivation.checkValid() {
 		return ErrInvalidPsbtFormat
 	}
-	(*p.Upsbt.Outputs)[outIndex].Bip32Derivation = append(
-		(*p.Upsbt.Outputs)[outIndex].Bip32Derivation, &bip32Derivation)
+	p.Upsbt.Outputs[outIndex].Bip32Derivation = append(
+		p.Upsbt.Outputs[outIndex].Bip32Derivation, &bip32Derivation)
 	if err := p.Upsbt.SanityCheck(); err != nil {
 		return err
 	}
@@ -266,7 +266,7 @@ func (p *PsbtUpdater) AddOutBip32Derivation(masterKeyFingerprint uint32,
 
 func (p *PsbtUpdater) AddOutRedeemScript(redeemScript []byte,
 	outIndex int) error {
-	(*p.Upsbt.Outputs)[outIndex].RedeemScript = redeemScript
+	p.Upsbt.Outputs[outIndex].RedeemScript = redeemScript
 	if err := p.Upsbt.SanityCheck(); err != nil {
 		return ErrInvalidPsbtFormat
 	}
@@ -275,7 +275,7 @@ func (p *PsbtUpdater) AddOutRedeemScript(redeemScript []byte,
 
 func (p *PsbtUpdater) AddOutWitnessScript(witnessScript []byte,
 	outIndex int) error {
-	(*p.Upsbt.Outputs)[outIndex].WitnessScript = witnessScript
+	p.Upsbt.Outputs[outIndex].WitnessScript = witnessScript
 	if err := p.Upsbt.SanityCheck(); err != nil {
 		return err
 	}

@@ -136,7 +136,7 @@ func checkSigHashFlags(sig []byte, input *PsbtInput) bool {
 // at least one of the FinalScriptSig or FinalScriptWitness
 // are filled (which only occurs in a successful call to Finalize*)
 func isFinalized(p *Psbt, idx int) bool {
-	input := &(*p.Inputs)[idx]
+	input := p.Inputs[idx]
 	return input.FinalScriptSig != nil || input.FinalScriptWitness != nil
 }
 
@@ -148,7 +148,7 @@ func isFinalized(p *Psbt, idx int) bool {
 // TODO Use something from the lib (not string) for address type,
 // and implement the code for other address types.
 func isFinalizable(p *Psbt, idx int, addrType string) bool {
-	pInput := &(*p.Inputs)[idx]
+	pInput := p.Inputs[idx]
 	switch addrType {
 	case "p2wpkh":
 		// p2wpkh doesn't require either InWitnessScript nor InRedeemScript
@@ -211,7 +211,7 @@ func MaybeFinalizeAll(p *Psbt) error {
 // returned.
 func Finalize(p *Psbt, idx int) error {
 	var err error
-	pInput := &(*p.Inputs)[idx]
+	pInput := p.Inputs[idx]
 	if pInput.WitnessUtxo != nil {
 		err = FinalizeWitness(p, idx)
 		if err != nil {
@@ -237,7 +237,7 @@ func Finalize(p *Psbt, idx int) error {
 // (FinalInWitness). If so, it returns true. It does not modify the
 // Psbt.
 func checkFinalScriptSigWitness(p *Psbt, idx int) bool {
-	pInput := &(*p.Inputs)[idx]
+	pInput := p.Inputs[idx]
 	if pInput.FinalScriptSig != nil {
 		return true
 	}
@@ -261,13 +261,13 @@ func FinalizeNonWitness(p *Psbt, inIndex int) error {
 	// for p2pkh type inputs).
 	var scriptSig []byte
 	var err error
-	pInput := &(*p.Inputs)[inIndex]
+	pInput := p.Inputs[inIndex]
 	containsRedeemScript := pInput.RedeemScript != nil
 	var pubKeys [][]byte
 	var sigs [][]byte
 	for _, ps := range pInput.PartialSigs {
 		pubKeys = append(pubKeys, ps.PubKey)
-		sigOK := checkSigHashFlags(ps.Signature, pInput)
+		sigOK := checkSigHashFlags(ps.Signature, &pInput)
 		if !sigOK {
 			return ErrInvalidSigHashFlags
 		}
@@ -317,7 +317,7 @@ func FinalizeNonWitness(p *Psbt, inIndex int) error {
 	// overwrite the entry in the input list at the correct index
 	// Note that this removes all the other entries in the list for
 	// this input index.
-	(*p.Inputs)[inIndex] = *newInput
+	p.Inputs[inIndex] = *newInput
 	return nil
 }
 
@@ -338,14 +338,14 @@ func FinalizeWitness(p *Psbt, inIndex int) error {
 	var scriptSig []byte
 	var witness []byte
 	var err error
-	pInput := &(*p.Inputs)[inIndex]
+	pInput := p.Inputs[inIndex]
 	containsRedeemScript := pInput.RedeemScript != nil
 	cointainsWitnessScript := pInput.WitnessScript != nil
 	var pubKeys [][]byte
 	var sigs [][]byte
 	for _, ps := range pInput.PartialSigs {
 		pubKeys = append(pubKeys, ps.PubKey)
-		sigOK := checkSigHashFlags(ps.Signature, pInput)
+		sigOK := checkSigHashFlags(ps.Signature, &pInput)
 		if !sigOK {
 			return ErrInvalidSigHashFlags
 		}
@@ -413,6 +413,6 @@ func FinalizeWitness(p *Psbt, inIndex int) error {
 	}
 	newInput.FinalScriptWitness = witness
 	// overwrite the entry in the input list at the correct index
-	(*p.Inputs)[inIndex] = *newInput
+	p.Inputs[inIndex] = *newInput
 	return nil
 }

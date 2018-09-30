@@ -701,11 +701,10 @@ func (po *PsbtOutput) Serialize(w io.Writer) error {
 // These key-value pairs can contain scripts, signatures,
 // key derivations and other transaction-defining data.
 type Psbt struct {
-	Raw        []byte      // raw binary serialization of Psbt
 	UnsignedTx *wire.MsgTx // Deserialization of unsigned tx
-	Inputs     *[]PsbtInput
-	Outputs    *[]PsbtOutput
-	Unknowns   *[]PsbtUnknown // Data of unknown type at global scope
+	Inputs     []PsbtInput
+	Outputs    []PsbtOutput
+	Unknowns   []PsbtUnknown // Data of unknown type at global scope
 }
 
 // validateUnsignedTx returns true if the transaction is unsigned.
@@ -714,17 +713,17 @@ type Psbt struct {
 // checked in the call to MsgTx.Deserialize()
 func validateUnsignedTX(tx *wire.MsgTx) bool {
 	for _, tin := range tx.TxIn {
-		if len(tin.SignatureScript) != 0 || tin.Witness != nil {
+		if len(tin.SignatureScript) != 0 || len(tin.Witness) != 0 {
 			return false
 		}
 	}
 	return true
 }
 
-// NewPsbtFromUnsignedTx creates a new Psbt struct including
-// the Psbt serialization (in the `Raw` field), without
+// NewPsbtFromUnsignedTx creates a new Psbt struct, without
 // any signatures (i.e. only the global section is non-empty).
 func NewPsbtFromUnsignedTx(tx *wire.MsgTx) (*Psbt, error) {
+
 	if !validateUnsignedTX(tx) {
 		return nil, ErrInvalidRawTxSigned
 	}
@@ -735,14 +734,11 @@ func NewPsbtFromUnsignedTx(tx *wire.MsgTx) (*Psbt, error) {
 
 	retPsbt := Psbt{
 		UnsignedTx: tx,
-		Inputs:     &inSlice,
-		Outputs:    &outSlice,
-		Unknowns:   &unknownSlice,
+		Inputs:     inSlice,
+		Outputs:    outSlice,
+		Unknowns:   unknownSlice,
 	}
-	err := retPsbt.Serialize()
-	if err != nil {
-		return nil, err
-	}
+
 	return &retPsbt, nil
 }
 
@@ -850,11 +846,10 @@ func NewPsbt(psbtBytes []byte, b64 bool) (*Psbt, error) {
 
 	// Populate the new Psbt object
 	newPsbt := Psbt{
-		Raw:        psbtBytes,
 		UnsignedTx: msgTx,
-		Inputs:     &inSlice,
-		Outputs:    &outSlice,
-		Unknowns:   &unknownSlice,
+		Inputs:     inSlice,
+		Outputs:    outSlice,
+		Unknowns:   unknownSlice,
 	}
 	// Extended sanity checking is applied here
 	// to make sure the externally-passed Psbt follows
@@ -868,54 +863,57 @@ func NewPsbt(psbtBytes []byte, b64 bool) (*Psbt, error) {
 
 // Serialize creates a binary serialization of the referenced
 // Psbt struct with lexicographical ordering (by key) of the subsections
-func (p *Psbt) Serialize() error {
-	p.Raw = []byte{}
-	p.Raw = append(p.Raw, PsbtMagic[:]...)
+func (p *Psbt) Serialize() ([]byte, error) {
+
+	serPsbt := []byte{}
+	serPsbt = append(serPsbt, PsbtMagic[:]...)
 
 	// Create serialization of unsignedtx
 	serializedTx := bytes.NewBuffer(make([]byte, 0,
 		p.UnsignedTx.SerializeSize()))
 	if err := p.UnsignedTx.Serialize(serializedTx); err != nil {
-		return err
+		return nil, err
 	}
 	var buf bytes.Buffer
 	err := serializeKVPairWithType(&buf, PsbtGlobalUnsignedTx,
 		nil, serializedTx.Bytes())
 	if err != nil {
-		return err
+		return nil, err
 	}
-	p.Raw = append(p.Raw, buf.Bytes()...)
-	p.Raw = append(p.Raw, 0x00)
+	serPsbt = append(serPsbt, buf.Bytes()...)
+	serPsbt = append(serPsbt, 0x00)
 
-	for _, pInput := range *(p.Inputs) {
+	for _, pInput := range p.Inputs {
 		var buf bytes.Buffer
 		err := pInput.Serialize(&buf)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		p.Raw = append(p.Raw, buf.Bytes()...)
-		p.Raw = append(p.Raw, 0x00)
+		serPsbt = append(serPsbt, buf.Bytes()...)
+		serPsbt = append(serPsbt, 0x00)
 	}
 
-	for _, pOutput := range *(p.Outputs) {
+	for _, pOutput := range p.Outputs {
 		var buf bytes.Buffer
 		err := pOutput.Serialize(&buf)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		p.Raw = append(p.Raw, buf.Bytes()...)
-		p.Raw = append(p.Raw, 0x00)
+		serPsbt = append(serPsbt, buf.Bytes()...)
+		serPsbt = append(serPsbt, 0x00)
 	}
 
-	return nil
+	return serPsbt, nil
 }
 
-// B64Encode returns the base64 encoding of the current
-// serialized Psbt in Psbt.Raw (note that the latter
-// will only be synchronized after a call to .Serialize()),
-// or an error if the encoding fails.
-func (p *Psbt) B64Encode() string {
-	return base64.StdEncoding.EncodeToString(p.Raw)
+// B64Encode returns the base64 encoding of the serialization of
+// the current PSBT, or an error if the encoding fails.
+func (p *Psbt) B64Encode() (string, error) {
+	raw, err := p.Serialize()
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(raw), nil
 }
 
 // IsComplete returns true only if all of the inputs are
@@ -940,9 +938,10 @@ func (p *Psbt) SanityCheck() error {
 	}
 
 	// Serialize calls the IsSane check on each input.
-	err := p.Serialize()
-	if err != nil {
-		return err
+	for _, tin := range p.Inputs {
+		if !tin.IsSane() {
+			return ErrInvalidPsbtFormat
+		}
 	}
 
 	return nil

@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
-
 	"testing"
 
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -118,13 +117,13 @@ func TestReadValidPsbtAndReserialize(t *testing.T) {
 		}
 		t.Logf("Successfully parsed test, got transaction: %v",
 			spew.Sdump(testPsbt.UnsignedTx))
-		err = testPsbt.Serialize()
+		raw, err := testPsbt.Serialize()
 		if err != nil {
 			t.Fatalf("Unable to serialize created Psbt: %v", err)
 		}
-		if !bytes.Equal(testPsbt.Raw, PsbtBytes) {
+		if !bytes.Equal(raw, PsbtBytes) {
 			t.Fatalf("Serialized PSBT didn't match: %v",
-				hex.EncodeToString(testPsbt.Raw))
+				hex.EncodeToString(raw))
 		}
 	}
 }
@@ -135,10 +134,10 @@ func TestReadInvalidPsbt(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unable to decode hex: %v", err)
 		}
-		invalidPsbt, err := NewPsbt(PsbtBytes, false)
+		_, err = NewPsbt(PsbtBytes, false)
 		if err == nil {
 			t.Fatalf("Incorrectly validated psbt: %v",
-				hex.EncodeToString(invalidPsbt.Raw))
+				hex.EncodeToString(PsbtBytes))
 		}
 		t.Logf("Correctly got error: %v", err)
 	}
@@ -177,7 +176,7 @@ func TestSanityCheck(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to deserialize: %v", err)
 	}
-	inputs1 := &(*psbt1.Inputs)[1]
+	inputs1 := &psbt1.Inputs[1]
 	inputs1.NonWitnessUtxo = nonWitnessUtxo
 	// The PSBT is now in an inconsistent state; Updater creation should fail
 	updater, err := NewUpdater(psbt1)
@@ -317,9 +316,13 @@ func TestPsbtCreator(t *testing.T) {
 	inputs := []*wire.OutPoint{prevOut1, prevOut2}
 	creator := PsbtCreator{}
 	creator.createPsbt(inputs, outputs, int32(2), int32(0))
-	if CUTestHexData["COPsbtHex"] != hex.EncodeToString(creator.Cpsbt.Raw) {
+	rawCreated, err := creator.Cpsbt.Serialize()
+	if err != nil {
+		t.Fatalf("Unable to serialize created Psbt: %v", err)
+	}
+	if CUTestHexData["COPsbtHex"] != hex.EncodeToString(rawCreated) {
 		t.Fatalf("Failed to create expected psbt, instead got: %v",
-			hex.EncodeToString(creator.Cpsbt.Raw))
+			hex.EncodeToString(rawCreated))
 	}
 	// Now simulate passing the created PSBT to an Updater
 	updater, err := NewUpdater(creator.Cpsbt)
@@ -351,7 +354,12 @@ func TestPsbtCreator(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to add Witness Utxo to inputs: %v", err)
 	}
-	if CUTestHexData["UOPsbtHex"] != hex.EncodeToString(updater.Upsbt.Raw) {
+
+	rawUpdated, err := updater.Upsbt.Serialize()
+	if err != nil {
+		t.Fatalf("Unable to serialize updated Psbt: %v", err)
+	}
+	if CUTestHexData["UOPsbtHex"] != hex.EncodeToString(rawUpdated) {
 		t.Fatal("Failed to create valid updated PSBT after utxos")
 	}
 	input1RedeemScript, err := hex.DecodeString(CUTestHexData["Input1RedeemScript"])
@@ -378,7 +386,11 @@ func TestPsbtCreator(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to add witness script: %v", err)
 	}
-	if CUTestHexData["UOPsbtHex2"] != hex.EncodeToString(updater.Upsbt.Raw) {
+	rawUpdated, err = updater.Upsbt.Serialize()
+	if err != nil {
+		t.Fatalf("Unable to serialize updated Psbt: %v", err)
+	}
+	if CUTestHexData["UOPsbtHex2"] != hex.EncodeToString(rawUpdated) {
 		t.Fatal("Failed to create valid updated PSBT after redeem scripts")
 	}
 	masterKey, err := hex.DecodeString(CUMasterKeyFingerPrint)
@@ -458,7 +470,11 @@ func TestPsbtCreator(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed to add key to second output")
 	}
-	if CUTestHexData["UOPsbtHex3"] != hex.EncodeToString(updater.Upsbt.Raw) {
+	rawUpdated, err = updater.Upsbt.Serialize()
+	if err != nil {
+		t.Fatalf("Unable to serialize updated Psbt: %v", err)
+	}
+	if CUTestHexData["UOPsbtHex3"] != hex.EncodeToString(rawUpdated) {
 		t.Fatal("Failed to create valid updated PSBT after BIP32 derivations")
 	}
 	err = updater.AddInSighashType(txscript.SigHashType(1), 0)
@@ -469,10 +485,17 @@ func TestPsbtCreator(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed to add sighash type to second input")
 	}
-	if CUTestHexData["UOPsbtHex4"] != hex.EncodeToString(updater.Upsbt.Raw) {
+	rawUpdated, err = updater.Upsbt.Serialize()
+	if err != nil {
+		t.Fatalf("Unable to serialize updated Psbt: %v", err)
+	}
+	if CUTestHexData["UOPsbtHex4"] != hex.EncodeToString(rawUpdated) {
 		t.Fatal("Failed to create valid updated PSBT after sighash types")
 	}
-	b644 := updater.Upsbt.B64Encode()
+	b644, err := updater.Upsbt.B64Encode()
+	if err != nil {
+		t.Fatalf("Unable to B64Encode updated Psbt: %v", err)
+	}
 	if b644 != CUTestB64Data["UOPsbtB644"] {
 		t.Fatalf("Failed to base64 encode updated PSBT after sighash "+
 			"types: %v", b644)
@@ -485,15 +508,11 @@ var signerPsbtData = map[string]string{
 	"signer1Privkey1": "cP53pDbR5WtAD8dYAW9hhTjuvvTVaEiQBdrz9XPrgLBeRFiyCbQr",
 	"signer1Privkey2": "cR6SXDoyfQrcp4piaiHE97Rsgta9mNhGTen9XeonVgwsh4iSgw6d",
 	"signer1PsbtB64":  "cHNidP8BAJoCAAAAAljoeiG1ba8MI76OcHBFbDNvfLqlyHV5JPVFiHuyq911AAAAAAD/////g40EJ9DsZQpoqka7CwmK6kQiwHGyyng1Kgd5WdB86h0BAAAAAP////8CcKrwCAAAAAAWABTYXCtx0AYLCcmIauuBXlCZHdoSTQDh9QUAAAAAFgAUAK6pouXw+HaliN9VRuh0LR2HAI8AAAAAAAEAuwIAAAABqtc5MQGL0l+ErkALaISL4J23BurCrBgpi6vucatlb4sAAAAASEcwRAIgWPb8fGoz4bMVSNSByCbAFb0wE1qtQs1neQ2rZtKtJDsCIEoc7SYExnNbY5PltBaR3XiwDwxZQvufdRhW+qk4FX26Af7///8CgPD6AgAAAAAXqRQPuUY0IWlrgsgzryQceMF9295JNIfQ8gonAQAAABepFCnKdPigj4GZlCgYXJe12FLkBj9hh2UAAAABBEdSIQKVg785rgpgl0etGZrd1jT6YQhVnWxc05tMIYPxq5bgfyEC2rYf9JoU22p9ArDNH7t4/EsYMStbTlTa5Nui+/71NtdSriIGApWDvzmuCmCXR60Zmt3WNPphCFWdbFzTm0whg/GrluB/ENkMak8AAACAAAAAgAAAAIAiBgLath/0mhTban0CsM0fu3j8SxgxK1tOVNrk26L7/vU21xDZDGpPAAAAgAAAAIABAACAAQMEAQAAAAABASAAwusLAAAAABepFLf1+vQOPUClpFmx2zU18rcvqSHohwEEIgAgjCNTFzdDtZXftKB7crqOQuN5fadOh/59nXSX47ICiQMBBUdSIQMIncEMesbbVPkTKa9hczPbOIzq0MIx9yM3nRuZAwsC3CECOt2QTz1tz1nduQaw3uI1Kbf/ue1Q5ehhUZJoYCIfDnNSriIGAjrdkE89bc9Z3bkGsN7iNSm3/7ntUOXoYVGSaGAiHw5zENkMak8AAACAAAAAgAMAAIAiBgMIncEMesbbVPkTKa9hczPbOIzq0MIx9yM3nRuZAwsC3BDZDGpPAAAAgAAAAIACAACAAQMEAQAAAAAiAgOppMN/WZbTqiXbrGtXCvBlA5RJKUJGCzVHU+2e7KWHcRDZDGpPAAAAgAAAAIAEAACAACICAn9jmXV9Lv9VoTatAsaEsYOLZVbl8bazQoKpS2tQBRCWENkMak8AAACAAAAAgAUAAIAA",
-	//"signer1Psbt": "70736274ff01009a020000000258e87a21b56daf0c23be8e7070456c336f7cbaa5c8757924f545887bb2abdd750000000000ffffffff838d0427d0ec650a68aa46bb0b098aea4422c071b2ca78352a077959d07cea1d0100000000ffffffff0270aaf00800000000160014d85c2b71d0060b09c9886aeb815e50991dda124d00e1f5050000000016001400aea9a2e5f0f876a588df5546e8742d1d87008f00000000000100bb0200000001aad73931018bd25f84ae400b68848be09db706eac2ac18298babee71ab656f8b0000000048473044022058f6fc7c6a33e1b31548d481c826c015bd30135aad42cd67790dab66d2ad243b02204a1ced2604c6735b6393e5b41691dd78b00f0c5942fb9f751856faa938157dba01feffffff0280f0fa020000000017a9140fb9463421696b82c833af241c78c17ddbde493487d0f20a270100000017a91429ca74f8a08f81999428185c97b5d852e4063f6187650000000104475221029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f2102dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d752ae2206029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f10d90c6a4f000000800000008000000080220602dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d710d90c6a4f000000800000008001000080010304010000000001012000c2eb0b0000000017a914b7f5faf40e3d40a5a459b1db3535f2b72fa921e88701042200208c2353173743b595dfb4a07b72ba8e42e3797da74e87fe7d9d7497e3b2028903010547522103089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc21023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7352ae2206023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7310d90c6a4f000000800000008003000080220603089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc10d90c6a4f0000008000000080020000800103040100000000220203a9a4c37f5996d3aa25dbac6b570af0650394492942460b354753ed9eeca5877110d90c6a4f000000800000008004000080002202027f6399757d2eff55a136ad02c684b1838b6556e5f1b6b34282a94b6b5005109610d90c6a4f00000080000000800500008000",
-	//"signer1Result": "cHNidP8BAJoCAAAAAljoeiG1ba8MI76OcHBFbDNvfLqlyHV5JPVFiHuyq911AAAAAAD/////g40EJ9DsZQpoqka7CwmK6kQiwHGyyng1Kgd5WdB86h0BAAAAAP////8CcKrwCAAAAAAWABTYXCtx0AYLCcmIauuBXlCZHdoSTQDh9QUAAAAAFgAUAK6pouXw+HaliN9VRuh0LR2HAI8AAAAAAAEAuwIAAAABqtc5MQGL0l+ErkALaISL4J23BurCrBgpi6vucatlb4sAAAAASEcwRAIgWPb8fGoz4bMVSNSByCbAFb0wE1qtQs1neQ2rZtKtJDsCIEoc7SYExnNbY5PltBaR3XiwDwxZQvufdRhW+qk4FX26Af7///8CgPD6AgAAAAAXqRQPuUY0IWlrgsgzryQceMF9295JNIfQ8gonAQAAABepFCnKdPigj4GZlCgYXJe12FLkBj9hh2UAAAAiAgKVg785rgpgl0etGZrd1jT6YQhVnWxc05tMIYPxq5bgf0cwRAIgdAGK1BgAl7hzMjwAFXILNoTMgSOJEEjn282bVa1nnJkCIHPTabdA4+tT3O+jOCPIBwUUylWn3ZVE8VfBZ5EyYRGMAQEDBAEAAAABBEdSIQKVg785rgpgl0etGZrd1jT6YQhVnWxc05tMIYPxq5bgfyEC2rYf9JoU22p9ArDNH7t4/EsYMStbTlTa5Nui+/71NtdSriIGApWDvzmuCmCXR60Zmt3WNPphCFWdbFzTm0whg/GrluB/ENkMak8AAACAAAAAgAAAAIAiBgLath/0mhTban0CsM0fu3j8SxgxK1tOVNrk26L7/vU21xDZDGpPAAAAgAAAAIABAACAAAEBIADC6wsAAAAAF6kUt/X69A49QKWkWbHbNTXyty+pIeiHIgIDCJ3BDHrG21T5EymvYXMz2ziM6tDCMfcjN50bmQMLAtxHMEQCIGLrelVhB6fHP0WsSrWh3d9vcHX7EnWWmn84Pv/3hLyyAiAMBdu3Rw2/LwhVfdNWxzJcHtMJE+mWzThAlF2xIijaXwEBAwQBAAAAAQQiACCMI1MXN0O1ld+0oHtyuo5C43l9p06H/n2ddJfjsgKJAwEFR1IhAwidwQx6xttU+RMpr2FzM9s4jOrQwjH3IzedG5kDCwLcIQI63ZBPPW3PWd25BrDe4jUpt/+57VDl6GFRkmhgIh8Oc1KuIgYCOt2QTz1tz1nduQaw3uI1Kbf/ue1Q5ehhUZJoYCIfDnMQ2QxqTwAAAIAAAACAAwAAgCIGAwidwQx6xttU+RMpr2FzM9s4jOrQwjH3IzedG5kDCwLcENkMak8AAACAAAAAgAIAAIAAIgIDqaTDf1mW06ol26xrVwrwZQOUSSlCRgs1R1Ptnuylh3EQ2QxqTwAAAIAAAACABAAAgAAiAgJ/Y5l1fS7/VaE2rQLGhLGDi2VW5fG2s0KCqUtrUAUQlhDZDGpPAAAAgAAAAIAFAACAAA=="
 	"signer1Result":   "70736274ff01009a020000000258e87a21b56daf0c23be8e7070456c336f7cbaa5c8757924f545887bb2abdd750000000000ffffffff838d0427d0ec650a68aa46bb0b098aea4422c071b2ca78352a077959d07cea1d0100000000ffffffff0270aaf00800000000160014d85c2b71d0060b09c9886aeb815e50991dda124d00e1f5050000000016001400aea9a2e5f0f876a588df5546e8742d1d87008f00000000000100bb0200000001aad73931018bd25f84ae400b68848be09db706eac2ac18298babee71ab656f8b0000000048473044022058f6fc7c6a33e1b31548d481c826c015bd30135aad42cd67790dab66d2ad243b02204a1ced2604c6735b6393e5b41691dd78b00f0c5942fb9f751856faa938157dba01feffffff0280f0fa020000000017a9140fb9463421696b82c833af241c78c17ddbde493487d0f20a270100000017a91429ca74f8a08f81999428185c97b5d852e4063f6187650000002202029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f473044022074018ad4180097b873323c0015720b3684cc8123891048e7dbcd9b55ad679c99022073d369b740e3eb53dcefa33823c8070514ca55a7dd9544f157c167913261118c01010304010000000104475221029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f2102dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d752ae2206029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f10d90c6a4f000000800000008000000080220602dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d710d90c6a4f0000008000000080010000800001012000c2eb0b0000000017a914b7f5faf40e3d40a5a459b1db3535f2b72fa921e887220203089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc473044022062eb7a556107a7c73f45ac4ab5a1dddf6f7075fb1275969a7f383efff784bcb202200c05dbb7470dbf2f08557dd356c7325c1ed30913e996cd3840945db12228da5f010103040100000001042200208c2353173743b595dfb4a07b72ba8e42e3797da74e87fe7d9d7497e3b2028903010547522103089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc21023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7352ae2206023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7310d90c6a4f000000800000008003000080220603089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc10d90c6a4f00000080000000800200008000220203a9a4c37f5996d3aa25dbac6b570af0650394492942460b354753ed9eeca5877110d90c6a4f000000800000008004000080002202027f6399757d2eff55a136ad02c684b1838b6556e5f1b6b34282a94b6b5005109610d90c6a4f00000080000000800500008000",
 	"signer2Privkey1": "cT7J9YpCwY3AVRFSjN6ukeEeWY6mhpbJPxRaDaP5QTdygQRxP9Au",
 	"signer2Privkey2": "cNBc3SWUip9PPm1GjRoLEJT6T41iNzCYtD7qro84FMnM5zEqeJsE",
-	//"signer2Psbt":     "cHNidP8BAJoCAAAAAljoeiG1ba8MI76OcHBFbDNvfLqlyHV5JPVFiHuyq911AAAAAAD/////g40EJ9DsZQpoqka7CwmK6kQiwHGyyng1Kgd5WdB86h0BAAAAAP////8CcKrwCAAAAAAWABTYXCtx0AYLCcmIauuBXlCZHdoSTQDh9QUAAAAAFgAUAK6pouXw+HaliN9VRuh0LR2HAI8AAAAAAAEAuwIAAAABqtc5MQGL0l+ErkALaISL4J23BurCrBgpi6vucatlb4sAAAAASEcwRAIgWPb8fGoz4bMVSNSByCbAFb0wE1qtQs1neQ2rZtKtJDsCIEoc7SYExnNbY5PltBaR3XiwDwxZQvufdRhW+qk4FX26Af7///8CgPD6AgAAAAAXqRQPuUY0IWlrgsgzryQceMF9295JNIfQ8gonAQAAABepFCnKdPigj4GZlCgYXJe12FLkBj9hh2UAAAABBEdSIQKVg785rgpgl0etGZrd1jT6YQhVnWxc05tMIYPxq5bgfyEC2rYf9JoU22p9ArDNH7t4/EsYMStbTlTa5Nui+/71NtdSriIGApWDvzmuCmCXR60Zmt3WNPphCFWdbFzTm0whg/GrluB/ENkMak8AAACAAAAAgAAAAIAiBgLath/0mhTban0CsM0fu3j8SxgxK1tOVNrk26L7/vU21xDZDGpPAAAAgAAAAIABAACAAQMEAQAAAAABASAAwusLAAAAABepFLf1+vQOPUClpFmx2zU18rcvqSHohwEEIgAgjCNTFzdDtZXftKB7crqOQuN5fadOh/59nXSX47ICiQMBBUdSIQMIncEMesbbVPkTKa9hczPbOIzq0MIx9yM3nRuZAwsC3CECOt2QTz1tz1nduQaw3uI1Kbf/ue1Q5ehhUZJoYCIfDnNSriIGAjrdkE89bc9Z3bkGsN7iNSm3/7ntUOXoYVGSaGAiHw5zENkMak8AAACAAAAAgAMAAIAiBgMIncEMesbbVPkTKa9hczPbOIzq0MIx9yM3nRuZAwsC3BDZDGpPAAAAgAAAAIACAACAAQMEAQAAAAAiAgOppMN/WZbTqiXbrGtXCvBlA5RJKUJGCzVHU+2e7KWHcRDZDGpPAAAAgAAAAIAEAACAACICAn9jmXV9Lv9VoTatAsaEsYOLZVbl8bazQoKpS2tQBRCWENkMak8AAACAAAAAgAUAAIAA",
-	"signer2Psbt": "70736274ff01009a020000000258e87a21b56daf0c23be8e7070456c336f7cbaa5c8757924f545887bb2abdd750000000000ffffffff838d0427d0ec650a68aa46bb0b098aea4422c071b2ca78352a077959d07cea1d0100000000ffffffff0270aaf00800000000160014d85c2b71d0060b09c9886aeb815e50991dda124d00e1f5050000000016001400aea9a2e5f0f876a588df5546e8742d1d87008f00000000000100bb0200000001aad73931018bd25f84ae400b68848be09db706eac2ac18298babee71ab656f8b0000000048473044022058f6fc7c6a33e1b31548d481c826c015bd30135aad42cd67790dab66d2ad243b02204a1ced2604c6735b6393e5b41691dd78b00f0c5942fb9f751856faa938157dba01feffffff0280f0fa020000000017a9140fb9463421696b82c833af241c78c17ddbde493487d0f20a270100000017a91429ca74f8a08f81999428185c97b5d852e4063f6187650000000104475221029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f2102dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d752ae2206029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f10d90c6a4f000000800000008000000080220602dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d710d90c6a4f000000800000008001000080010304010000000001012000c2eb0b0000000017a914b7f5faf40e3d40a5a459b1db3535f2b72fa921e88701042200208c2353173743b595dfb4a07b72ba8e42e3797da74e87fe7d9d7497e3b2028903010547522103089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc21023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7352ae2206023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7310d90c6a4f000000800000008003000080220603089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc10d90c6a4f0000008000000080020000800103040100000000220203a9a4c37f5996d3aa25dbac6b570af0650394492942460b354753ed9eeca5877110d90c6a4f000000800000008004000080002202027f6399757d2eff55a136ad02c684b1838b6556e5f1b6b34282a94b6b5005109610d90c6a4f00000080000000800500008000",
-	//"signer2Result":   "cHNidP8BAJoCAAAAAljoeiG1ba8MI76OcHBFbDNvfLqlyHV5JPVFiHuyq911AAAAAAD/////g40EJ9DsZQpoqka7CwmK6kQiwHGyyng1Kgd5WdB86h0BAAAAAP////8CcKrwCAAAAAAWABTYXCtx0AYLCcmIauuBXlCZHdoSTQDh9QUAAAAAFgAUAK6pouXw+HaliN9VRuh0LR2HAI8AAAAAAAEAuwIAAAABqtc5MQGL0l+ErkALaISL4J23BurCrBgpi6vucatlb4sAAAAASEcwRAIgWPb8fGoz4bMVSNSByCbAFb0wE1qtQs1neQ2rZtKtJDsCIEoc7SYExnNbY5PltBaR3XiwDwxZQvufdRhW+qk4FX26Af7///8CgPD6AgAAAAAXqRQPuUY0IWlrgsgzryQceMF9295JNIfQ8gonAQAAABepFCnKdPigj4GZlCgYXJe12FLkBj9hh2UAAAAiAgLath/0mhTban0CsM0fu3j8SxgxK1tOVNrk26L7/vU210gwRQIhAPYQOLMI3B2oZaNIUnRvAVdyk0IIxtJEVDk82ZvfIhd3AiAFbmdaZ1ptCgK4WxTl4pB02KJam1dgvqKBb2YZEKAG6gEBAwQBAAAAAQRHUiEClYO/Oa4KYJdHrRma3dY0+mEIVZ1sXNObTCGD8auW4H8hAtq2H/SaFNtqfQKwzR+7ePxLGDErW05U2uTbovv+9TbXUq4iBgKVg785rgpgl0etGZrd1jT6YQhVnWxc05tMIYPxq5bgfxDZDGpPAAAAgAAAAIAAAACAIgYC2rYf9JoU22p9ArDNH7t4/EsYMStbTlTa5Nui+/71NtcQ2QxqTwAAAIAAAACAAQAAgAABASAAwusLAAAAABepFLf1+vQOPUClpFmx2zU18rcvqSHohyICAjrdkE89bc9Z3bkGsN7iNSm3/7ntUOXoYVGSaGAiHw5zRzBEAiBl9FulmYtZon/+GnvtAWrx8fkNVLOqj3RQql9WolEDvQIgf3JHA60e25ZoCyhLVtT/y4j3+3Weq74IqjDym4UTg9IBAQMEAQAAAAEEIgAgjCNTFzdDtZXftKB7crqOQuN5fadOh/59nXSX47ICiQMBBUdSIQMIncEMesbbVPkTKa9hczPbOIzq0MIx9yM3nRuZAwsC3CECOt2QTz1tz1nduQaw3uI1Kbf/ue1Q5ehhUZJoYCIfDnNSriIGAjrdkE89bc9Z3bkGsN7iNSm3/7ntUOXoYVGSaGAiHw5zENkMak8AAACAAAAAgAMAAIAiBgMIncEMesbbVPkTKa9hczPbOIzq0MIx9yM3nRuZAwsC3BDZDGpPAAAAgAAAAIACAACAACICA6mkw39ZltOqJdusa1cK8GUDlEkpQkYLNUdT7Z7spYdxENkMak8AAACAAAAAgAQAAIAAIgICf2OZdX0u/1WhNq0CxoSxg4tlVuXxtrNCgqlLa1AFEJYQ2QxqTwAAAIAAAACABQAAgAA=",
-	"signer2Result": "70736274ff01009a020000000258e87a21b56daf0c23be8e7070456c336f7cbaa5c8757924f545887bb2abdd750000000000ffffffff838d0427d0ec650a68aa46bb0b098aea4422c071b2ca78352a077959d07cea1d0100000000ffffffff0270aaf00800000000160014d85c2b71d0060b09c9886aeb815e50991dda124d00e1f5050000000016001400aea9a2e5f0f876a588df5546e8742d1d87008f00000000000100bb0200000001aad73931018bd25f84ae400b68848be09db706eac2ac18298babee71ab656f8b0000000048473044022058f6fc7c6a33e1b31548d481c826c015bd30135aad42cd67790dab66d2ad243b02204a1ced2604c6735b6393e5b41691dd78b00f0c5942fb9f751856faa938157dba01feffffff0280f0fa020000000017a9140fb9463421696b82c833af241c78c17ddbde493487d0f20a270100000017a91429ca74f8a08f81999428185c97b5d852e4063f618765000000220202dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d7483045022100f61038b308dc1da865a34852746f015772934208c6d24454393cd99bdf2217770220056e675a675a6d0a02b85b14e5e29074d8a25a9b5760bea2816f661910a006ea01010304010000000104475221029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f2102dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d752ae2206029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f10d90c6a4f000000800000008000000080220602dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d710d90c6a4f0000008000000080010000800001012000c2eb0b0000000017a914b7f5faf40e3d40a5a459b1db3535f2b72fa921e8872202023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e73473044022065f45ba5998b59a27ffe1a7bed016af1f1f90d54b3aa8f7450aa5f56a25103bd02207f724703ad1edb96680b284b56d4ffcb88f7fb759eabbe08aa30f29b851383d2010103040100000001042200208c2353173743b595dfb4a07b72ba8e42e3797da74e87fe7d9d7497e3b2028903010547522103089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc21023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7352ae2206023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7310d90c6a4f000000800000008003000080220603089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc10d90c6a4f00000080000000800200008000220203a9a4c37f5996d3aa25dbac6b570af0650394492942460b354753ed9eeca5877110d90c6a4f000000800000008004000080002202027f6399757d2eff55a136ad02c684b1838b6556e5f1b6b34282a94b6b5005109610d90c6a4f00000080000000800500008000",
+	"signer2Psbt":     "70736274ff01009a020000000258e87a21b56daf0c23be8e7070456c336f7cbaa5c8757924f545887bb2abdd750000000000ffffffff838d0427d0ec650a68aa46bb0b098aea4422c071b2ca78352a077959d07cea1d0100000000ffffffff0270aaf00800000000160014d85c2b71d0060b09c9886aeb815e50991dda124d00e1f5050000000016001400aea9a2e5f0f876a588df5546e8742d1d87008f00000000000100bb0200000001aad73931018bd25f84ae400b68848be09db706eac2ac18298babee71ab656f8b0000000048473044022058f6fc7c6a33e1b31548d481c826c015bd30135aad42cd67790dab66d2ad243b02204a1ced2604c6735b6393e5b41691dd78b00f0c5942fb9f751856faa938157dba01feffffff0280f0fa020000000017a9140fb9463421696b82c833af241c78c17ddbde493487d0f20a270100000017a91429ca74f8a08f81999428185c97b5d852e4063f6187650000000104475221029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f2102dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d752ae2206029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f10d90c6a4f000000800000008000000080220602dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d710d90c6a4f000000800000008001000080010304010000000001012000c2eb0b0000000017a914b7f5faf40e3d40a5a459b1db3535f2b72fa921e88701042200208c2353173743b595dfb4a07b72ba8e42e3797da74e87fe7d9d7497e3b2028903010547522103089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc21023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7352ae2206023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7310d90c6a4f000000800000008003000080220603089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc10d90c6a4f0000008000000080020000800103040100000000220203a9a4c37f5996d3aa25dbac6b570af0650394492942460b354753ed9eeca5877110d90c6a4f000000800000008004000080002202027f6399757d2eff55a136ad02c684b1838b6556e5f1b6b34282a94b6b5005109610d90c6a4f00000080000000800500008000",
+	"signer2Result":   "70736274ff01009a020000000258e87a21b56daf0c23be8e7070456c336f7cbaa5c8757924f545887bb2abdd750000000000ffffffff838d0427d0ec650a68aa46bb0b098aea4422c071b2ca78352a077959d07cea1d0100000000ffffffff0270aaf00800000000160014d85c2b71d0060b09c9886aeb815e50991dda124d00e1f5050000000016001400aea9a2e5f0f876a588df5546e8742d1d87008f00000000000100bb0200000001aad73931018bd25f84ae400b68848be09db706eac2ac18298babee71ab656f8b0000000048473044022058f6fc7c6a33e1b31548d481c826c015bd30135aad42cd67790dab66d2ad243b02204a1ced2604c6735b6393e5b41691dd78b00f0c5942fb9f751856faa938157dba01feffffff0280f0fa020000000017a9140fb9463421696b82c833af241c78c17ddbde493487d0f20a270100000017a91429ca74f8a08f81999428185c97b5d852e4063f618765000000220202dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d7483045022100f61038b308dc1da865a34852746f015772934208c6d24454393cd99bdf2217770220056e675a675a6d0a02b85b14e5e29074d8a25a9b5760bea2816f661910a006ea01010304010000000104475221029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f2102dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d752ae2206029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f10d90c6a4f000000800000008000000080220602dab61ff49a14db6a7d02b0cd1fbb78fc4b18312b5b4e54dae4dba2fbfef536d710d90c6a4f0000008000000080010000800001012000c2eb0b0000000017a914b7f5faf40e3d40a5a459b1db3535f2b72fa921e8872202023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e73473044022065f45ba5998b59a27ffe1a7bed016af1f1f90d54b3aa8f7450aa5f56a25103bd02207f724703ad1edb96680b284b56d4ffcb88f7fb759eabbe08aa30f29b851383d2010103040100000001042200208c2353173743b595dfb4a07b72ba8e42e3797da74e87fe7d9d7497e3b2028903010547522103089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc21023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7352ae2206023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7310d90c6a4f000000800000008003000080220603089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc10d90c6a4f00000080000000800200008000220203a9a4c37f5996d3aa25dbac6b570af0650394492942460b354753ed9eeca5877110d90c6a4f000000800000008004000080002202027f6399757d2eff55a136ad02c684b1838b6556e5f1b6b34282a94b6b5005109610d90c6a4f00000080000000800500008000",
 }
 
 func TestPsbtSigner(t *testing.T) {
@@ -520,7 +539,11 @@ func TestPsbtSigner(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to decode hex: %v", err)
 	}
-	if !bytes.Equal(psbtUpdater1.Upsbt.Raw, signer1Result) {
+	rawUpdated, err := psbtUpdater1.Upsbt.Serialize()
+	if err != nil {
+		t.Fatalf("Unable to serialize updated Psbt: %v", err)
+	}
+	if !bytes.Equal(rawUpdated, signer1Result) {
 		t.Fatalf("Failed to add signatures correctly")
 	}
 }
@@ -547,7 +570,7 @@ func TestPsbtExtractor(t *testing.T) {
 		t.Fatalf("Failed to parse PSBT: %v", err)
 	}
 
-	for i, _ := range *psbt1.Inputs {
+	for i, _ := range psbt1.Inputs {
 		err = Finalize(psbt1, i)
 		if err != nil {
 			t.Fatalf("Error from finalizing PSBT: %v", err)
@@ -567,8 +590,12 @@ func TestPsbtExtractor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to extract: %v", err)
 	}
-	if !bytes.Equal(psbt1.Raw, finalizer1Result) {
-		t.Fatalf("Failed to finalize transaction %x", psbt1.Raw)
+	rawPsbt1, err := psbt1.Serialize()
+	if err != nil {
+		t.Fatalf("Unable to serialize updated Psbt: %v", err)
+	}
+	if !bytes.Equal(rawPsbt1, finalizer1Result) {
+		t.Fatalf("Failed to finalize transaction %x", rawPsbt1)
 	}
 	if !bytes.Equal(finalToNetworkExpected, resultToNetwork) {
 		t.Fatalf("Failed to network serialize transaction: %x", resultToNetwork)
@@ -683,7 +710,7 @@ func TestImportFromCore1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error deserializing transaction: %v", err)
 	}
-	(*psbtBorkedInput2.Inputs)[1] = *NewPsbtInput(wrongTx, nil)
+	psbtBorkedInput2.Inputs[1] = *NewPsbtInput(wrongTx, nil)
 	err = borkedUpdater.AddPartialSignature(1, sig2, pub2)
 	if err != ErrInvalidSignatureForInput {
 		t.Fatalf("Error should have been invalid sig for input, was: %v", err)
@@ -808,7 +835,10 @@ func TestImportFromCore2(t *testing.T) {
 	// partially (not completely) signed transaction with that generated and
 	// encoded by Core.
 	expectedPsbtPartialB64 := "cHNidP8BAJsCAAAAAkxTQ+rig5QNnUS5nMc+Pccow4IcOJeQRcNNw+7p5ZA5AQAAAAD/////qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqoNAAAAAP////8CAIYOcAAAAAAWABQ1l7nn13RubTwqRQU2BnVV5WlXBWAxMbUAAAAAF6kUkiuXUjfWFgTp6nl/gf9+8zIWR6KHAAAAAAABASAAg1KEAAAAABepFJ82edZ6mkhiOHZPYYqTuCp9mZEDhwEHFxYAFHrtOUIKi3q5ioN5EyfMtwgZ0fviAQhrAkcwRAIgVG0YLQDkXvZZwync5hl9wZ4KvHleLJJ5hz9aiHmYsnMCIEQUMRP8NHXQT8jVET4LvLQtgFFKnxoiR+myp4eOINRJASECuzzjWvJvTIJuqz5fwmPvVocbJmhqiplVmbfuZXZhMQQAAAABABYAFOCEa9F4SKtAyh9WtlXG+jFmeIDMAA=="
-	generatedPsbtPartialB64 := psbt1.B64Encode()
+	generatedPsbtPartialB64, err := psbt1.B64Encode()
+	if err != nil {
+		t.Fatalf("Unable to B64Encode Psbt: %v", err)
+	}
 	if expectedPsbtPartialB64 != generatedPsbtPartialB64 {
 		t.Fatalf("Partial did not match expected: %v", generatedPsbtPartialB64)
 	}
@@ -885,12 +915,12 @@ func TestImportFromCore2(t *testing.T) {
 
 	// Sanity check; we should not have lost the additional output entry
 	// provided by Core initially
-	uoutput1 := &(*psbtupdater2.Upsbt.Outputs)[1]
+	uoutput1 := psbtupdater2.Upsbt.Outputs[1]
 	if uoutput1.RedeemScript == nil {
 		t.Fatalf("PSBT should contain outredeemscript entry, but it does not.")
 	}
 	// Nor should we have lost our fake witnessscript output entry
-	uoutput2 := &(*psbtupdater2.Upsbt.Outputs)[0]
+	uoutput2 := psbtupdater2.Upsbt.Outputs[0]
 	if uoutput2.WitnessScript == nil {
 		t.Fatalf("PSBT should contain outwitnessscript but it does not.")
 	}
@@ -987,4 +1017,34 @@ func TestMaybeFinalizeAll(t *testing.T) {
 		t.Fatalf("PSBT was finalized but not marked complete")
 	}
 
+}
+
+func TestFromUnsigned(t *testing.T) {
+	serTx, err := hex.DecodeString("00000000000101e165f072311e71825b47a4797221d7ae56d4b40b7707c540049aee43302448a40000000000feffffff0212f1126a0000000017a9143e836801b2b15aa193449d815c62d6c4b6227c898780778e060000000017a914ba4bdb0b07d67bc60f59c1f4fe54170565254974870000000000")
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	tx := wire.NewMsgTx(2)
+	err = tx.Deserialize(bytes.NewReader(serTx))
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	psbt1, err := NewPsbtFromUnsignedTx(tx)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
+	encoded, err := psbt1.B64Encode()
+	if err != nil {
+		t.Fatalf("Unable to B64Encode Psbt: %v", err)
+	}
+
+	// Compare with output of Core:
+	fromCoreB64 := "cHNidP8BAHMAAAAAAeFl8HIxHnGCW0ekeXIh165W1LQLdwfFQASa7kMwJEikAAAAAAD+////AhLxEmoAAAAAF6kUPoNoAbKxWqGTRJ2BXGLWxLYifImHgHeOBgAAAAAXqRS6S9sLB9Z7xg9ZwfT+VBcFZSVJdIcAAAAAAAAAAA=="
+	if encoded != fromCoreB64 {
+		t.Fatalf("Got incorrect b64: %v", encoded)
+	}
+	_, err = NewPsbt([]byte(fromCoreB64), true)
+	if err != nil {
+		t.Fatalf("Error: %v", err)
+	}
 }

@@ -315,7 +315,22 @@ func TestPsbtCreator(t *testing.T) {
 	prevOut2 := wire.NewOutPoint(hash2, uint32(1))
 	inputs := []*wire.OutPoint{prevOut1, prevOut2}
 	creator := PsbtCreator{}
-	creator.createPsbt(inputs, outputs, int32(2), int32(0))
+	// Check creation fails with invalid sequences:
+	nSequences := []uint32{wire.MaxTxInSequenceNum}
+	err = creator.createPsbt(inputs, outputs, int32(3), uint32(0), nSequences)
+	if err == nil {
+		t.Fatalf("Did not error when creating transaction with " +
+			"invalid nSequences")
+	}
+	nSequences = append(nSequences, wire.MaxTxInSequenceNum)
+	// Check creation fails with invalid version
+	err = creator.createPsbt(inputs, outputs, int32(3), uint32(0), nSequences)
+	if err == nil {
+		t.Fatalf("Did not error when creating transaction with " +
+			"invalid version (3)")
+	}
+	// Use valid data to create:
+	creator.createPsbt(inputs, outputs, int32(2), uint32(0), nSequences)
 	rawCreated, err := creator.Cpsbt.Serialize()
 	if err != nil {
 		t.Fatalf("Unable to serialize created Psbt: %v", err)

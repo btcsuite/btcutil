@@ -22,19 +22,30 @@ type PsbtCreator struct {
 // the transaction, returns a PsbtCreator struct.
 // Note that we require OutPoints and not TxIn structs, as we will
 // only populate the txid:n information, *not* any scriptSig/witness
-// information. Also note that the BIP does not discuss version and locktime;
-// we allow them here as variables to be set on creation.
+// information. The values of nLockTime, nSequence (per input) and
+// transaction version (must be 1 of 2) must be specified here. Note
+// that the default nSequence value is wire.MaxTxInSequenceNum.
 func (c *PsbtCreator) createPsbt(inputs []*wire.OutPoint,
-	outputs []*wire.TxOut, Version int32, nLockTime int32) error {
+	outputs []*wire.TxOut, Version int32, nLockTime uint32,
+	nSequences []uint32) error {
 	// Create the new struct; the input and output lists will be empty,
 	// the unsignedTx object must be constructed and serialized,
 	// and that serialization should be entered as the only entry for
 	// the globalKVPairs list.
+
+	// Check the version is a valid Bitcoin tx version; the nLockTime
+	// can be any valid uint32. There must be one sequence number per
+	// input.
+	if !(Version == 1 || Version == 2) || len(nSequences) != len(inputs) {
+		return ErrInvalidPsbtFormat
+	}
 	unsignedTx := wire.NewMsgTx(Version)
-	for _, in := range inputs {
+	unsignedTx.LockTime = nLockTime
+
+	for i, in := range inputs {
 		unsignedTx.AddTxIn(&wire.TxIn{
 			PreviousOutPoint: *in,
-			Sequence:         wire.MaxTxInSequenceNum,
+			Sequence:         nSequences[i],
 		})
 	}
 	for _, out := range outputs {

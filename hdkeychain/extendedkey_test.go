@@ -517,8 +517,8 @@ tests:
 	}
 }
 
-// TestGenenerateSeed ensures the GenerateSeed function works as intended.
-func TestGenenerateSeed(t *testing.T) {
+// TestGenerateSeed ensures the GenerateSeed function works as intended.
+func TestGenerateSeed(t *testing.T) {
 	wantErr := errors.New("seed length must be between 128 and 512 bits")
 
 	tests := []struct {

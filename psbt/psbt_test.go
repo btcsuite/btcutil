@@ -192,7 +192,7 @@ func TestSanityCheck(t *testing.T) {
 	psbt1, err = NewPsbt(psbtraw1, false)
 	updater, err = NewUpdater(psbt1)
 	if err != nil {
-		t.Fatalf("Unable to create PsbtUpdater: %v", err)
+		t.Fatalf("Unable to create Updater: %v", err)
 	}
 	// Create a fake non-witness utxo field to overlap with
 	// the existing witness input at index 1.
@@ -540,15 +540,15 @@ func TestPsbtSigner(t *testing.T) {
 	}
 	sig1, err := hex.DecodeString("3044022074018ad4180097b873323c0015720b3684cc8123891048e7dbcd9b55ad679c99022073d369b740e3eb53dcefa33823c8070514ca55a7dd9544f157c167913261118c01")
 	pub1, err := hex.DecodeString("029583bf39ae0a609747ad199addd634fa6108559d6c5cd39b4c2183f1ab96e07f")
-	err = psbtUpdater1.AddPartialSignature(0, sig1, pub1)
-	if err != nil {
-		t.Fatalf("Error from adding signatures: %v", err)
+	res, err := psbtUpdater1.Sign(0, sig1, pub1, nil, nil)
+	if err != nil || res != 0 {
+		t.Fatalf("Error from adding signatures: %v %v", err, res)
 	}
 	sig2, err := hex.DecodeString("3044022062eb7a556107a7c73f45ac4ab5a1dddf6f7075fb1275969a7f383efff784bcb202200c05dbb7470dbf2f08557dd356c7325c1ed30913e996cd3840945db12228da5f01")
 	pub2, err := hex.DecodeString("03089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc")
-	err = psbtUpdater1.AddPartialSignature(1, sig2, pub2)
-	if err != nil {
-		t.Fatalf("Error from adding signatures: %v", err)
+	res, err = psbtUpdater1.Sign(1, sig2, pub2, nil, nil)
+	if err != nil || res != 0 {
+		t.Fatalf("Error from adding signatures: %v %v", err, res)
 	}
 	signer1Result, err := hex.DecodeString(signerPsbtData["signer1Result"])
 	if err != nil {
@@ -676,15 +676,16 @@ func TestImportFromCore1(t *testing.T) {
 
 	// Check that invalid pubkeys are not accepted.
 	pubInvalid := append(pub1, 0x00)
-	err = psbtupdater1.AddPartialSignature(0, sig1, pubInvalid)
+
+	res, err := psbtupdater1.Sign(0, sig1, pubInvalid, nil, nil)
 	if err == nil {
 		t.Fatalf("Incorrectly accepted invalid pubkey: %v",
 			pubInvalid)
 	}
 
-	err = psbtupdater1.AddPartialSignature(0, sig1, pub1)
-	if err != nil {
-		t.Fatalf("Failed to add signature to first input: %v", err)
+	res, err = psbtupdater1.Sign(0, sig1, pub1, nil, nil)
+	if err != nil || res != 0 {
+		t.Fatalf("Error from adding signatures: %v %v", err, res)
 	}
 
 	sig2Hex := "3044022014eb9c4858f71c9f280bc68402aa742a5187f54c56c8eb07c902eb1eb5804e5502203d66656de8386b9b044346d5605f5ae2b200328fb30476f6ac993fc0dbb0455901"
@@ -710,11 +711,13 @@ func TestImportFromCore1(t *testing.T) {
 			"version: %v", err)
 	}
 	borkedUpdater.AddInWitnessUtxo(txFund1Out, 0)
-	err = borkedUpdater.AddPartialSignature(0, sig2, pub2)
+
+	res, err = borkedUpdater.Sign(0, sig2, pub2, nil, nil)
 	if err != ErrInvalidSignatureForInput {
 		t.Fatalf("AddPartialSig succeeded, but should have failed "+
 			"due to mismatch between pubkey and prevOut; err was: %v", err)
 	}
+
 	// Next, a valid tx serialization, but not the right one
 	wrongTxBytes, err := hex.DecodeString("020000000001012d1d7b17356d0ad8232a5817d2d2fa5cd97d803c0ed03e013e97b65f4f1e5e7501000000171600147848cfb25bb163c7c63732615980a25eddbadc7bfeffffff022a8227630000000017a91472128ae6b6a1b74e499bedb5efb1cb09c9a6713287107240000000000017a91485f81cb970d854e2513ebf5c5b5d09e4509f4af3870247304402201c09aa8bcd18753ef01d8712a55eea5a0f69b6c4cc2944ac942264ff0662c91402201fc1390bf8b0023dd12ae78d7ec181124e106de57bc8f00812ae92bd024d3045012103ba077fc011aa59393bfe17cf491b3a02a9c4d39df122b2148322da0ec23508f459430800")
 	if err != nil {
@@ -726,15 +729,15 @@ func TestImportFromCore1(t *testing.T) {
 		t.Fatalf("Error deserializing transaction: %v", err)
 	}
 	psbtBorkedInput2.Inputs[1] = *NewPsbtInput(wrongTx, nil)
-	err = borkedUpdater.AddPartialSignature(1, sig2, pub2)
+	res, err = borkedUpdater.Sign(1, sig2, pub2, nil, nil)
 	if err != ErrInvalidSignatureForInput {
 		t.Fatalf("Error should have been invalid sig for input, was: %v", err)
 	}
 	// ======================================================
 
-	err = psbtupdater1.AddPartialSignature(1, sig2, pub2)
-	if err != nil {
-		t.Fatalf("Failed to add signature to second input: %v", err)
+	res, err = psbtupdater1.Sign(1, sig2, pub2, nil, nil)
+	if err != nil || res != 0 {
+		t.Fatalf("Failed to add signature to second input: %v %v", err, res)
 	}
 
 	// Neither input (p2pkh and p2wpkh) require redeem script nor witness script,
@@ -823,9 +826,9 @@ func TestImportFromCore2(t *testing.T) {
 		t.Fatalf("Unable to decode hex: %v", err)
 	}
 
-	err = psbtupdater1.AddPartialSignature(0, sig1, pub1)
-	if err != nil {
-		t.Fatalf("Unable to add partial signature: %v", err)
+	res, err := psbtupdater1.Sign(0, sig1, pub1, nil, nil)
+	if err != nil || res != 0 {
+		t.Fatalf("Unable to add partial signature: %v %v", err, res)
 	}
 
 	// Since this input is now finalizable, we do so:
@@ -913,8 +916,8 @@ func TestImportFromCore2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to decode hex: %v", err)
 	}
-	psbtupdater2.AddPartialSignature(1, sig21, pub21)
-	psbtupdater2.AddPartialSignature(1, sig22, pub22)
+	res, err = psbtupdater2.Sign(1, sig21, pub21, nil, nil)
+	res, err = psbtupdater2.Sign(1, sig22, pub22, nil, nil)
 	success, err := MaybeFinalize(psbt2, 1, "np2wsh")
 	if !success {
 		if err != nil {
@@ -1007,11 +1010,13 @@ func TestMaybeFinalizeAll(t *testing.T) {
 	pub2, _ := hex.DecodeString("022011b496f0603a268b55a781c7be0c3849f605f09cb2e917ed44288b8144a752")
 	sig3, _ := hex.DecodeString("3044022036dbc6f8f85a856e7803cbbcf0a97b7a74806fc592e92d7c06826f911610b98e0220111d43c4b20f756581791334d9c5cbb1a9c07558f28404cabf01c782897ad50501")
 	pub3, _ := hex.DecodeString("0381772a80c69e275e20d7f014555b13031e9cacf1c54a44a67ab2bc7eba64f227")
-	if err = psbtupdater1.AddPartialSignature(0, sig1, pub1); err != nil {
-		t.Fatalf("Failed to add partial signature for input 0: %v", err)
+	res, err := psbtupdater1.Sign(0, sig1, pub1, nil, nil)
+	if err != nil || res != 0 {
+		t.Fatalf("Failed to add partial signature for input 0: %v %v", err, res)
 	}
-	if err = psbtupdater1.AddPartialSignature(1, sig2, pub2); err != nil {
-		t.Fatalf("Failed to add partial signature for input 1: %v", err)
+	res, err = psbtupdater1.Sign(1, sig2, pub2, nil, nil)
+	if err != nil || res != 0 {
+		t.Fatalf("Failed to add partial signature for input 1: %v %v", err, res)
 	}
 
 	// Not ready for finalize all, check it fails:
@@ -1020,7 +1025,7 @@ func TestMaybeFinalizeAll(t *testing.T) {
 		t.Fatalf("Expected finalization failure, got: %v", err)
 	}
 
-	psbtupdater1.AddPartialSignature(2, sig3, pub3)
+	res, err = psbtupdater1.Sign(2, sig3, pub3, nil, nil)
 
 	// Since this input is now finalizable and is p2wpkh only, we can do
 	// all at once:

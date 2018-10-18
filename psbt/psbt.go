@@ -108,7 +108,7 @@ var (
 	ErrInputAlreadyFinalized = errors.New("Cannot finalize PSBT, finalized " +
 		"scriptSig or scriptWitnes already exists")
 
-	// ErrIncompletePSBT indicates that the PsbtExtractor object
+	// ErrIncompletePSBT indicates that the Extractor object
 	// was unable to successfully extract the passed Psbt struct because
 	// it is not complete
 	ErrIncompletePSBT = errors.New("PSBT cannot be extracted as it is " +
@@ -756,7 +756,7 @@ func NewPsbtFromUnsignedTx(tx *wire.MsgTx) (*Psbt, error) {
 // is returned. If the argument b64 is true, the passed byte slice
 // is decoded from base64 encoding before processing.
 // NOTE To create a Psbt from one's own data, rather than reading
-// in a serialization from a counterparty, one should use a PsbtCreator.
+// in a serialization from a counterparty, one should use a psbt.Creator.
 func NewPsbt(psbtBytes []byte, b64 bool) (*Psbt, error) {
 	var err error
 	if b64 {
@@ -829,6 +829,7 @@ func NewPsbt(psbtBytes []byte, b64 bool) (*Psbt, error) {
 		}
 		unknownSlice = append(unknownSlice, newUnknown)
 	}
+
 	// Next we parse the INPUT section
 	inSlice := make([]PInput, len(msgTx.TxIn))
 
@@ -946,7 +947,6 @@ func (p *Psbt) SanityCheck() error {
 		return ErrInvalidRawTxSigned
 	}
 
-	// Serialize calls the IsSane check on each input.
 	for _, tin := range p.Inputs {
 		if !tin.IsSane() {
 			return ErrInvalidPsbtFormat

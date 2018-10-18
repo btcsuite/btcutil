@@ -7,8 +7,9 @@ package psbt
 // The Updater requires provision of a single PSBT and is able
 // to add data to both input and output sections.
 // It can be called repeatedly to add more data.
-// It also allows addition of signatures via the AddPartialSignature
-// function, thus fulfilling the Signer role also.
+// It also allows addition of signatures via the addPartialSignature
+// function; this is called internally to the package in the Sign()
+// function of Updater, located in signer.go
 
 import (
 	"bytes"
@@ -26,7 +27,7 @@ type Updater struct {
 	Upsbt *Psbt
 }
 
-// NewUpdater returns a new instance of PsbtUpdater,
+// NewUpdater returns a new instance of Updater,
 // if the passed Psbt struct is in a valid form,
 // else an error.
 func NewUpdater(p *Psbt) (*Updater, error) {
@@ -70,7 +71,7 @@ func (p *Updater) AddInWitnessUtxo(txout *wire.TxOut, inIndex int) error {
 	return nil
 }
 
-// AddPartialSignature allows the Updater role to insert fields
+// addPartialSignature allows the Updater role to insert fields
 // of type partial signature into a Psbt, consisting of both
 // the pubkey (as keydata) and the ECDSA signature (as value).
 // Note that the Signer role is encapsulated in this function;
@@ -78,7 +79,7 @@ func (p *Updater) AddInWitnessUtxo(txout *wire.TxOut, inIndex int) error {
 // on signing rules explained in the BIP under `Signer`; if the rules are not
 // satisfied, an ErrInvalidSignatureForInput is returned.
 // NOTE this function does *not* validate the ECDSA signature itself.
-func (p *Updater) AddPartialSignature(inIndex int, sig []byte,
+func (p *Updater) addPartialSignature(inIndex int, sig []byte,
 	pubkey []byte) error {
 
 	partialSig := PartialSig{PubKey: pubkey, Signature: sig}

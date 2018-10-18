@@ -19,7 +19,7 @@ type Creator struct {
 }
 
 // createPsbt, on provision of an input and output 'skeleton' for
-// the transaction, returns a PsbtCreator struct.
+// the transaction, returns a Creator struct.
 // Note that we require OutPoints and not TxIn structs, as we will
 // only populate the txid:n information, *not* any scriptSig/witness
 // information. The values of nLockTime, nSequence (per input) and

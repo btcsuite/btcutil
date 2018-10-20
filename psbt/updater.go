@@ -138,7 +138,7 @@ func (p *Updater) addPartialSignature(inIndex int, sig []byte,
 		// whether nested or not (that is handled by the assignment to
 		// `script` above); in that case, sanity check that `script`
 		// is the p2wsh of witnessScript. Contrariwise, if no witnessScript
-		// field is present, this will be signed as p2wpkh.
+		// field is present, this will be signed as p2wkh.
 		if pInput.WitnessScript != nil {
 			witnessScriptHash := sha256.Sum256(pInput.WitnessScript)
 			witnessScriptHashScript, err := txscript.NewScriptBuilder().AddOp(
@@ -149,7 +149,7 @@ func (p *Updater) addPartialSignature(inIndex int, sig []byte,
 			if !bytes.Equal(script, witnessScriptHashScript[:]) {
 				return ErrInvalidSignatureForInput
 			}
-		} else { // p2wpkh
+		} else { // p2wkh
 			pubkeyHash := btcutil.Hash160(pubkey)
 			pubkeyHashScript, err := txscript.NewScriptBuilder().AddOp(
 				txscript.OP_0).AddData(pubkeyHash).Script()

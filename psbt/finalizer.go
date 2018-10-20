@@ -41,7 +41,7 @@ func writeTxWitness(w io.Writer, wit [][]byte) error {
 	return nil
 }
 
-// writePKHWitness writes a witness for a p2wpkh spending input
+// writePKHWitness writes a witness for a p2wkh spending input
 func writePKHWitness(sig []byte, pub []byte) ([]byte, error) {
 	var buf bytes.Buffer
 	var witnessItems = [][]byte{sig, pub}
@@ -143,15 +143,14 @@ func isFinalized(p *Psbt, idx int) bool {
 // isFinalizable checks whether the structure of the entry
 // for the input of the Psbt p at index idx contains sufficient
 // information to finalize this input, based on the template
-// implied by addrType (currently only 'p2wpkh, 'p2wsh', 'np2wpkh' or
+// implied by addrType (currently only 'p2wkh, 'p2wsh', 'np2wkh' or
 // 'np2wsh' are accepted, where 'n' refers to nested).
 // TODO Use something from the lib (not string) for address type,
 // and implement the code for other address types.
 func isFinalizable(p *Psbt, idx int, addrType string) bool {
 	pInput := p.Inputs[idx]
 	switch addrType {
-	case "p2wpkh":
-		// p2wpkh doesn't require either InWitnessScript nor InRedeemScript
+	case "p2wkh", "legacy":
 		if pInput.PartialSigs != nil {
 			return true
 		}
@@ -160,12 +159,18 @@ func isFinalizable(p *Psbt, idx int, addrType string) bool {
 		if pInput.PartialSigs != nil && pInput.WitnessScript != nil {
 			return true
 		}
-	case "np2wpkh", "np2wsh":
+	case "np2wkh":
+		if pInput.PartialSigs != nil && pInput.RedeemScript != nil {
+			return true
+		}
+		return false
+	case "np2wsh":
 		if pInput.PartialSigs != nil && pInput.RedeemScript != nil &&
 			pInput.WitnessScript != nil {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -188,11 +193,11 @@ func MaybeFinalize(p *Psbt, idx int, addrType string) (bool, error) {
 
 // MaybeFinalizeAll attempts to finalize all inputs of the Psbt that
 // are not already finalized, and returns an error if it fails to do so.
-// TODO only to be used for p2wpkh inputs currently; otherwise call
+// TODO only to be used for p2wkh inputs currently; otherwise call
 // Finalize on a per-input basis.
 func MaybeFinalizeAll(p *Psbt) error {
 	for i := range p.UnsignedTx.TxIn {
-		success, err := MaybeFinalize(p, i, "p2wpkh")
+		success, err := MaybeFinalize(p, i, "p2wkh")
 		if err != nil || !success {
 			return err
 		}
@@ -334,7 +339,7 @@ func FinalizeWitness(p *Psbt, inIndex int) error {
 	// as per bip141).
 	// Fill this in in field FinalScriptSig (keytype 07).
 	// And/or construct a FinalScriptWitness field (keytype 08),
-	// assuming either p2wpkh or p2wsh multisig.
+	// assuming either p2wkh or p2wsh multisig.
 	var scriptSig []byte
 	var witness []byte
 	var err error
@@ -356,7 +361,7 @@ func FinalizeWitness(p *Psbt, inIndex int) error {
 	}
 	if !containsRedeemScript {
 		if len(pubKeys) == 1 && len(sigs) == 1 && !cointainsWitnessScript {
-			// p2wpkh case
+			// p2wkh case
 			witness, err = writePKHWitness(sigs[0], pubKeys[0])
 			if err != nil {
 				return err
@@ -377,7 +382,7 @@ func FinalizeWitness(p *Psbt, inIndex int) error {
 
 	} else {
 		// This is currently assumed p2wsh, multisig, nested in p2sh,
-		// or p2wpkh, nested in p2sh.
+		// or p2wkh, nested in p2sh.
 		// The scriptSig is taken from the redeemscript field, but embedded
 		// in a push
 		builder := txscript.NewScriptBuilder()
@@ -387,7 +392,7 @@ func FinalizeWitness(p *Psbt, inIndex int) error {
 			return err
 		}
 		if !cointainsWitnessScript {
-			// Assumed p2sh-p2wpkh
+			// Assumed p2sh-p2wkh
 			// Here the witness is just (sig, pub)
 			witness, err = writePKHWitness(sigs[0], pubKeys[0])
 			if err != nil {

@@ -918,7 +918,7 @@ func TestImportFromCore2(t *testing.T) {
 	}
 	res, err = psbtupdater2.Sign(1, sig21, pub21, nil, nil)
 	res, err = psbtupdater2.Sign(1, sig22, pub22, nil, nil)
-	success, err := MaybeFinalize(psbt2, 1, "np2wsh")
+	success, err := MaybeFinalize(psbt2, 1)
 	if !success {
 		if err != nil {
 			t.Fatalf("Failed to finalize second input: %v", err)
@@ -1144,15 +1144,15 @@ func TestNonWitnessToWitness(t *testing.T) {
 	}
 
 	// Attempt to finalize the rest of the transaction
-	_, err = MaybeFinalize(psbt1, 1, "np2wkh")
+	_, err = MaybeFinalize(psbt1, 1)
 	if err != nil {
 		t.Fatalf("Failed to finalize input 1 %v", err)
 	}
-	_, err = MaybeFinalize(psbt1, 2, "p2wkh")
+	_, err = MaybeFinalize(psbt1, 2)
 	if err != nil {
 		t.Fatalf("Failed to finalize input 2 %v", err)
 	}
-	_, err = MaybeFinalize(psbt1, 3, "legacy")
+	_, err = MaybeFinalize(psbt1, 3)
 	if err != nil {
 		t.Fatalf("Failed to finalize input 3 %v", err)
 	}

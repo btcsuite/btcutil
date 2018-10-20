@@ -142,46 +142,77 @@ func isFinalized(p *Psbt, idx int) bool {
 
 // isFinalizable checks whether the structure of the entry
 // for the input of the Psbt p at index idx contains sufficient
-// information to finalize this input, based on the template
-// implied by addrType (currently only 'p2wkh, 'p2wsh', 'np2wkh' or
-// 'np2wsh' are accepted, where 'n' refers to nested).
-// TODO Use something from the lib (not string) for address type,
-// and implement the code for other address types.
-func isFinalizable(p *Psbt, idx int, addrType string) bool {
+// information to finalize this input. Deduce the template
+// from the contents.
+func isFinalizable(p *Psbt, idx int) bool {
 	pInput := p.Inputs[idx]
-	switch addrType {
-	case "p2wkh", "legacy":
-		if pInput.PartialSigs != nil {
-			return true
-		}
+
+	// Cannot be finalizable without any signatures
+	if pInput.PartialSigs == nil {
 		return false
-	case "p2wsh-2-2":
-		if pInput.PartialSigs != nil && pInput.WitnessScript != nil {
-			return true
-		}
-	case "np2wkh":
-		if pInput.PartialSigs != nil && pInput.RedeemScript != nil {
-			return true
-		}
-		return false
-	case "np2wsh":
-		if pInput.PartialSigs != nil && pInput.RedeemScript != nil &&
-			pInput.WitnessScript != nil {
-			return true
-		}
 	}
 
-	return false
+	if pInput.WitnessUtxo != nil {
+		if txscript.IsWitnessProgram(pInput.WitnessUtxo.PkScript) {
+			if txscript.IsPayToWitnessScriptHash(pInput.WitnessUtxo.PkScript) {
+				if pInput.WitnessScript == nil || pInput.RedeemScript != nil {
+					return false
+				}
+			} else {
+				// if it's p2wkh there should be no redeemScript or witnessScript
+				if pInput.WitnessScript != nil || pInput.RedeemScript != nil {
+					return false
+				}
+			}
+		} else if txscript.IsPayToScriptHash(pInput.WitnessUtxo.PkScript) {
+			if pInput.RedeemScript == nil {
+				return false
+			}
+			// if it's nested, and it's p2wsh, it must have WitnessScript;
+			// if p2wkh, it must not.
+			if txscript.IsPayToWitnessScriptHash(pInput.RedeemScript) {
+				if pInput.WitnessScript == nil {
+					return false
+				}
+			} else if txscript.IsPayToWitnessPubKeyHash(pInput.RedeemScript) {
+				if pInput.WitnessScript != nil {
+					return false
+				}
+			} else {
+				// unrecognized type
+				return false
+			}
+		}
+	} else if pInput.NonWitnessUtxo != nil {
+		if pInput.WitnessScript != nil {
+			return false
+		}
+		outIndex := p.UnsignedTx.TxIn[idx].PreviousOutPoint.Index
+		if txscript.IsPayToScriptHash(pInput.NonWitnessUtxo.TxOut[outIndex].PkScript) {
+			if pInput.RedeemScript == nil {
+				return false
+			}
+		} else {
+			if pInput.RedeemScript != nil {
+				return false
+			}
+		}
+	} else {
+		// one of witness and nonwitness utxo must be present
+		return false
+	}
+
+	return true
 }
 
 // MaybeFinalize attempts to finalize the input at index idx
 // in the PSBT p, returning true with no error if it succeeds, OR
 // if the input has already been finalized.
-func MaybeFinalize(p *Psbt, idx int, addrType string) (bool, error) {
+func MaybeFinalize(p *Psbt, idx int) (bool, error) {
 	if isFinalized(p, idx) {
 		return true, nil
 	}
-	if !isFinalizable(p, idx, addrType) {
+	if !isFinalizable(p, idx) {
 		return false, ErrNotFinalizable
 	}
 	err := Finalize(p, idx)
@@ -193,11 +224,9 @@ func MaybeFinalize(p *Psbt, idx int, addrType string) (bool, error) {
 
 // MaybeFinalizeAll attempts to finalize all inputs of the Psbt that
 // are not already finalized, and returns an error if it fails to do so.
-// TODO only to be used for p2wkh inputs currently; otherwise call
-// Finalize on a per-input basis.
 func MaybeFinalizeAll(p *Psbt) error {
 	for i := range p.UnsignedTx.TxIn {
-		success, err := MaybeFinalize(p, i, "p2wkh")
+		success, err := MaybeFinalize(p, i)
 		if err != nil || !success {
 			return err
 		}

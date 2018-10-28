@@ -191,6 +191,21 @@ func (k *ExtendedKey) ParentFingerprint() uint32 {
 	return binary.BigEndian.Uint32(k.parentFP)
 }
 
+// ChainCode returns the chain code part of this extended key.
+//
+// It is identical for both public and private extended keys.
+func (k *ExtendedKey) ChainCode() []byte {
+	return append([]byte{}, k.chainCode...)
+}
+
+// ChildNum returns the index at which the child extended key was derived.
+//
+// Extended keys with ChildNum value between 0 and 2^31-1 are normal child
+// keys, and those with a value between 2^31 and 2^32-1 are hardened keys.
+func (k *ExtendedKey) ChildNum() uint32 {
+	return k.childNum
+}
+
 // Child returns a derived child extended key at the given index.  When this
 // extended key is a private extended key (as determined by the IsPrivate
 // function), a private extended key will be derived.  Otherwise, the derived

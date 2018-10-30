@@ -307,8 +307,8 @@ func SerializeBIP32Derivation(masterKeyFingerprint uint32,
 // the key type is unknown by this package; these fields are allowed
 // in both the 'Global' and the 'Input' section of a PSBT.
 type Unknown struct {
-	key   []byte
-	value []byte
+	Key   []byte
+	Value []byte
 }
 
 // PInput is a struct encapsulating all the data that can be attached
@@ -483,8 +483,8 @@ func (pi *PInput) deserialize(r io.Reader) error {
 			keyintanddata := []byte{byte(keyint)}
 			keyintanddata = append(keyintanddata, keydata...)
 			newUnknown := &Unknown{
-				key:   keyintanddata,
-				value: value,
+				Key:   keyintanddata,
+				Value: value,
 			}
 			pi.Unknowns = append(pi.Unknowns, newUnknown)
 		}
@@ -589,7 +589,7 @@ func (pi *PInput) serialize(w io.Writer) error {
 	// Unknown is a special case; we don't have a key type, only
 	// a key and a value field
 	for _, kv := range pi.Unknowns {
-		err := serializeKVpair(w, kv.key, kv.value)
+		err := serializeKVpair(w, kv.Key, kv.Value)
 		if err != nil {
 			return err
 		}
@@ -824,8 +824,8 @@ func NewPsbt(psbtBytes []byte, b64 bool) (*Psbt, error) {
 		keyintanddata := []byte{byte(keyint)}
 		keyintanddata = append(keyintanddata, keydata...)
 		newUnknown := Unknown{
-			key:   keyintanddata,
-			value: value,
+			Key:   keyintanddata,
+			Value: value,
 		}
 		unknownSlice = append(unknownSlice, newUnknown)
 	}

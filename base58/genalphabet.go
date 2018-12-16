@@ -25,16 +25,16 @@ package base58
 
 const (
 	// alphabet is the modified base58 alphabet used by Bitcoin.
-	alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+	alphabet = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz"
 
-	alphabetIdx0 = '1'
+	alphabetIdx0 = 'r'
 )
 
 var b58 = [256]byte{`)
 
 	end = []byte(`}`)
 
-	alphabet = []byte("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
+	alphabet = []byte("rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz")
 	tab      = []byte("\t")
 	invalid  = []byte("255")
 	comma    = []byte(",")

@@ -7,7 +7,7 @@ package base58_test
 import (
 	"testing"
 
-	"github.com/btcsuite/btcutil/base58"
+	"github.com/btcutil/base58"
 )
 
 var checkEncodingStringTests = []struct {
@@ -15,17 +15,17 @@ var checkEncodingStringTests = []struct {
 	in      string
 	out     string
 }{
-	{20, "", "3MNQE1X"},
-	{20, " ", "B2Kr6dBE"},
-	{20, "-", "B3jv1Aft"},
-	{20, "0", "B482yuaX"},
-	{20, "1", "B4CmeGAC"},
-	{20, "-1", "mM7eUf6kB"},
-	{20, "11", "mP7BMTDVH"},
-	{20, "abc", "4QiVtDjUdeq"},
-	{20, "1234598760", "ZmNb8uQn5zvnUohNCEPP"},
-	{20, "abcdefghijklmnopqrstuvwxyz", "K2RYDcKfupxwXdWhSAxQPCeiULntKm63UXyx5MvEH2"},
-	{20, "00000000000000000000000000000000000000000000000000000000000000", "bi1EWXwJay2udZVxLJozuTb8Meg4W9c6xnmJaRDjg6pri5MBAxb9XwrpQXbtnqEoRV5U2pixnFfwyXC8tRAVC8XxnjK"},
+	{20, "", "sM4QNrX"},
+	{20, " ", "BpKiadBN"},
+	{20, "-", "BsjvrwCt"},
+	{20, "0", "Bh3pyu2X"},
+	{20, "1", "BhUmeGwU"},
+	{20, "-1", "mMfe7CakB"},
+	{20, "11", "mPfBMTDVH"},
+	{20, "abc", "hQ5VtDj7deq"},
+	{20, "1234598760", "Zm4b3uQ8nzv87o64UNPP"},
+	{20, "abcdefghijklmnopqrstuvwxyz", "KpRYDcKCuFxAXdW6SwxQPUe57L8tKmas7XyxnMvNHp"},
+	{20, "00000000000000000000000000000000000000000000000000000000000000", "b5rNWXAJ2ypudZVxLJozuTb3MeghW9cax8mJ2RDjgaFi5nMBwxb9XAiFQXbt8qNoRVn7pF5x8ECAyXU3tRwVU3Xx8jK"},
 }
 
 func TestBase58Check(t *testing.T) {

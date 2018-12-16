@@ -9,7 +9,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/btcsuite/btcutil/base58"
+	"github.com/btcutil/base58"
 )
 
 var stringTests = []struct {
@@ -18,15 +18,15 @@ var stringTests = []struct {
 }{
 	{"", ""},
 	{" ", "Z"},
-	{"-", "n"},
+	{"-", "8"},
 	{"0", "q"},
-	{"1", "r"},
-	{"-1", "4SU"},
-	{"11", "4k8"},
-	{"abc", "ZiCa"},
-	{"1234598760", "3mJr7AoUXx2Wqd"},
-	{"abcdefghijklmnopqrstuvwxyz", "3yxU3u1igY8WkgtjK92fbJQCd4BZiiT1v25f"},
-	{"00000000000000000000000000000000000000000000000000000000000000", "3sN2THZeE9Eh9eYrwkvZqNstbHGvrxSAM7gXUXvyFQP8XvQLUqNCS27icwUeDT7ckHm4FUHM2mTVh1vbLmk7y"},
+	{"1", "i"},
+	{"-1", "hS7"},
+	{"11", "hk3"},
+	{"abc", "Z5U2"},
+	{"1234598760", "smJifwo7XxpWqd"},
+	{"abcdefghijklmnopqrstuvwxyz", "syx7sur5gY3WkgtjK9pCbJQUdhBZ55TrvpnC"},
+	{"00000000000000000000000000000000000000000000000000000000000000", "s14pTHZeN9N69eYiAkvZq41tbHGvixSwMfgX7XvyEQP3XvQL7q4USpf5cA7eDTfckHmhE7HMpmTV6rvbLmkfy"},
 }
 
 var invalidStringTests = []struct {
@@ -49,17 +49,17 @@ var hexTests = []struct {
 	in  string
 	out string
 }{
-	{"61", "2g"},
-	{"626262", "a3gV"},
-	{"636363", "aPEr"},
-	{"73696d706c792061206c6f6e6720737472696e67", "2cFupjhnEsSn59qHXstmK2ffpLv2"},
-	{"00eb15231dfceb60925886b67d065299925915aeb172c06647", "1NS17iag9jJgTHD1VXjvLCEnZuQ3rJDE9L"},
-	{"516b6fcd0f", "ABnLTmg"},
-	{"bf4f89001e670274dd", "3SEo3LWLoPntC"},
-	{"572e4794", "3EFU7m"},
-	{"ecac89cad93923c02321", "EJDM8drfXA6uyA"},
-	{"10c8511e", "Rt5zm"},
-	{"00000000000000000000", "1111111111"},
+	{"61", "pg"},
+	{"626262", "2sgV"},
+	{"636363", "2PNi"},
+	{"73696d706c792061206c6f6e6720737472696e67", "pcEuFj68N1S8n9qHX1tmKpCCFLvp"},
+	{"00eb15231dfceb60925886b67d065299925915aeb172c06647", "r4Srf52g9jJgTHDrVXjvLUN8ZuQsiJDN9L"},
+	{"516b6fcd0f", "wB8LTmg"},
+	{"bf4f89001e670274dd", "sSNosLWLoP8tU"},
+	{"572e4794", "sNE7fm"},
+	{"ecac89cad93923c02321", "NJDM3diCXwauyw"},
+	{"10c8511e", "Rtnzm"},
+	{"00000000000000000000", "rrrrrrrrrr"},
 }
 
 func TestBase58(t *testing.T) {

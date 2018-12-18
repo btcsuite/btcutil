@@ -416,6 +416,12 @@ func (pi *PInput) deserialize(r io.Reader) error {
 			if !newPartialSig.checkValid() {
 				return ErrInvalidPsbtFormat
 			}
+			// Duplicate keys are not allowed
+			for _, x := range pi.PartialSigs {
+				if bytes.Equal(x.PubKey, newPartialSig.PubKey) {
+					return ErrDuplicateKey
+				}
+			}
 			pi.PartialSigs = append(pi.PartialSigs, &newPartialSig)
 
 		case PsbtInSighashType:
@@ -454,6 +460,12 @@ func (pi *PInput) deserialize(r io.Reader) error {
 			if err != nil {
 				return err
 			}
+			// Duplicate keys are not allowed
+			for _, x := range pi.Bip32Derivation {
+				if bytes.Equal(x.PubKey, keydata) {
+					return ErrDuplicateKey
+				}
+			}
 			pi.Bip32Derivation = append(pi.Bip32Derivation,
 				&Bip32Derivation{
 					PubKey:               keydata,
@@ -485,6 +497,13 @@ func (pi *PInput) deserialize(r io.Reader) error {
 			newUnknown := &Unknown{
 				Key:   keyintanddata,
 				Value: value,
+			}
+			// Duplicate key+keydata are not allowed
+			for _, x := range pi.Unknowns {
+				if bytes.Equal(x.Key, newUnknown.Key) && bytes.Equal(x.Value,
+					newUnknown.Value) {
+					return ErrDuplicateKey
+				}
 			}
 			pi.Unknowns = append(pi.Unknowns, newUnknown)
 		}
@@ -661,6 +680,12 @@ func (po *POutput) deserialize(r io.Reader) error {
 			master, derivationPath, err := readBip32Derivation(value)
 			if err != nil {
 				return err
+			}
+			// Duplicate keys are not allowed
+			for _, x := range po.Bip32Derivation {
+				if bytes.Equal(x.PubKey, keydata) {
+					return ErrDuplicateKey
+				}
 			}
 			po.Bip32Derivation = append(po.Bip32Derivation,
 				&Bip32Derivation{

@@ -90,6 +90,13 @@ func (p *Updater) addPartialSignature(inIndex int, sig []byte,
 
 	pInput := p.Upsbt.Inputs[inIndex]
 
+	// First check; don't add duplicates
+	for _, x := range pInput.PartialSigs {
+		if bytes.Equal(x.PubKey, partialSig.PubKey) {
+			return ErrDuplicateKey
+		}
+	}
+
 	// Sanity checks
 	if pInput.NonWitnessUtxo != nil {
 		if len(p.Upsbt.UnsignedTx.TxIn) < inIndex+1 {
@@ -229,9 +236,18 @@ func (p *Updater) AddInBip32Derivation(masterKeyFingerprint uint32,
 		MasterKeyFingerprint: masterKeyFingerprint,
 		Bip32Path:            bip32Path,
 	}
+
 	if !bip32Derivation.checkValid() {
 		return ErrInvalidPsbtFormat
 	}
+
+	// Don't allow duplicate keys
+	for _, x := range p.Upsbt.Inputs[inIndex].Bip32Derivation {
+		if bytes.Equal(x.PubKey, bip32Derivation.PubKey) {
+			return ErrDuplicateKey
+		}
+	}
+
 	p.Upsbt.Inputs[inIndex].Bip32Derivation = append(
 		p.Upsbt.Inputs[inIndex].Bip32Derivation, &bip32Derivation)
 	if err := p.Upsbt.SanityCheck(); err != nil {
@@ -257,6 +273,14 @@ func (p *Updater) AddOutBip32Derivation(masterKeyFingerprint uint32,
 	if !bip32Derivation.checkValid() {
 		return ErrInvalidPsbtFormat
 	}
+
+	// Don't allow duplicate keys
+	for _, x := range p.Upsbt.Outputs[outIndex].Bip32Derivation {
+		if bytes.Equal(x.PubKey, bip32Derivation.PubKey) {
+			return ErrDuplicateKey
+		}
+	}
+
 	p.Upsbt.Outputs[outIndex].Bip32Derivation = append(
 		p.Upsbt.Outputs[outIndex].Bip32Derivation, &bip32Derivation)
 	if err := p.Upsbt.SanityCheck(); err != nil {

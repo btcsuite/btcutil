@@ -13,6 +13,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
+	sparkswapChainCfg "github.com/sparkswap/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/btcsuite/btcutil/bech32"
 	"golang.org/x/crypto/ripemd160"
@@ -188,8 +189,8 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, error) {
 	}
 	switch len(decoded) {
 	case ripemd160.Size: // P2PKH or P2SH
-		isP2PKH := chaincfg.IsPubKeyHashAddrID(netID)
-		isP2SH := chaincfg.IsScriptHashAddrID(netID)
+		isP2PKH := sparkswapChainCfg.IsPubKeyHashAddrID(netID, defaultNet)
+		isP2SH := sparkswapChainCfg.IsScriptHashAddrID(netID, defaultNet)
 		switch hash160 := decoded; {
 		case isP2PKH && isP2SH:
 			return nil, ErrAddressCollision

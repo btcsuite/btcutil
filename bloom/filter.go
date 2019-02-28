@@ -202,6 +202,8 @@ func (bf *Filter) add(data []byte) {
 	///  filter[arrayIndex] |= 1<<bitOffset
 	for i := uint32(0); i < bf.msgFilterLoad.HashFuncs; i++ {
 		idx := bf.hash(i, data)
+		// >> 3 是将hash结果落到某个字节区间里面
+		// 1 << (7 & idx) 表示在这个字节区间里面的偏移量
 		bf.msgFilterLoad.Filter[idx>>3] |= (1 << (7 & idx))
 	}
 }
@@ -309,7 +311,7 @@ func (bf *Filter) matchTxAndUpdate(tx *btcutil.Tx) bool {
 	// public key scripts of its outputs matched.
 
 	// Check if the filter matches any outpoints this transaction spends or
-	// any any data elements in the signature scripts of any of the inputs.
+	// any data elements in the signature scripts of any of the inputs.
 	for _, txin := range tx.MsgTx().TxIn {
 		if bf.matchesOutPoint(&txin.PreviousOutPoint) {
 			return true

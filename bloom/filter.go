@@ -113,7 +113,7 @@ func (bf *Filter) Unload() {
 }
 
 // hash returns the bit offset in the bloom filter which corresponds to the
-// passed data for the given indepedent hash function number.
+// passed data for the given independent hash function number.
 func (bf *Filter) hash(hashNum uint32, data []byte) uint32 {
 	// bitcoind: 0xfba4c795 chosen as it guarantees a reasonable bit
 	// difference between hashNum values.

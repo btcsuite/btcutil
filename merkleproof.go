@@ -7,11 +7,14 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 )
 
+// MerkleProof contains the position of the hash whose inclusion you want to prove
+// and then the chain of hashes you need to calculate the root hash
 type MerkleProof struct {
 	Position uint64
 	Hashes   []*chainhash.Hash
 }
 
+// Bytes serializes the merkle proof into a byte slice
 func (m MerkleProof) Bytes() []byte {
 	var buf bytes.Buffer
 	binary.Write(&buf, binary.BigEndian, m.Position)
@@ -21,6 +24,9 @@ func (m MerkleProof) Bytes() []byte {
 	return buf.Bytes()
 }
 
+// NewMerkleProof generates a MerkleProof from a merkle tree and a index of the
+// element you want to prove. The merkle tree is expected to be in the form that
+// is returned by BuildMerkleTreeStore
 func NewMerkleProof(merkleTree []*chainhash.Hash, idx uint64) MerkleProof {
 	treeHeight := calcTreeHeight(uint64((len(merkleTree) + 1) / 2))
 	proof := MerkleProof{Position: idx, Hashes: make([]*chainhash.Hash, treeHeight)}
@@ -31,6 +37,7 @@ func NewMerkleProof(merkleTree []*chainhash.Hash, idx uint64) MerkleProof {
 	return proof
 }
 
+// NewMerkleProofFromBytes will deserialize a merkle proof from a byte slice
 func NewMerkleProofFromBytes(b []byte) MerkleProof {
 	m := MerkleProof{}
 	buf := bytes.NewBuffer(b)
@@ -46,6 +53,9 @@ func NewMerkleProofFromBytes(b []byte) MerkleProof {
 	return m
 }
 
+// Check will validate a merkle proof given the hash of the element to prove (hash)
+// and the expected root hash (expectedRoot). Will return true when the merkle proof
+// is valid, false otherwise.
 func (proof MerkleProof) Check(hash, expectedRoot *chainhash.Hash) bool {
 	treeHeight := uint(len(proof.Hashes))
 	hashIdx := proof.Position
@@ -63,6 +73,7 @@ func (proof MerkleProof) Check(hash, expectedRoot *chainhash.Hash) bool {
 	return bytes.Equal(hash[:], expectedRoot[:])
 }
 
+// calcTreeHeight will return the height of a tree with n elements.
 func calcTreeHeight(n uint64) (e uint) {
 	for ; (1 << e) < n; e++ {
 	}

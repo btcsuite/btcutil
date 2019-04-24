@@ -8,10 +8,8 @@ package psbt
 // in which all necessary signatures are encoded, and
 // uses it to construct valid final scriptSig and scriptWitness
 // fields.
-// NOTE that Finalizer is an interface, since it's understood
-// that the logic to finalize inputs varies per input type;
-// in this module are implementations for native segwit p2sh 2 of 2 multisig
-// and non-segwit p2sh 2 of 2 multisig.
+// NOTE that p2sh (legacy) and p2wsh currently support only
+// multisig and no other custom script.
 
 import (
 	"bytes"
@@ -52,6 +50,16 @@ func writePKHWitness(sig []byte, pub []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// checkIsMultisigScript is a utility function to check wheter
+// a given redeemscript fits the standard multisig template used
+// in all p2sh based multisig, given a set of pubkeys for redemption.
+func checkIsMultisigScript(pubKeys [][]byte, script []byte) bool {
+	if txscript.GetScriptClass(script) != txscript.MultiSigTy {
+		return false
+	}
+	return true
+}
+
 // extractKeyOrderFromScript is a utility function
 // to extract an ordered list of signatures, given
 // a serialized script (redeemscript or witness script),
@@ -60,6 +68,10 @@ func writePKHWitness(sig []byte, pub []byte) ([]byte, error) {
 // scriptSig or scriptWitness in the correct order.
 func extractKeyOrderFromScript(script []byte, expectedPubkeys [][]byte,
 	sigs [][]byte) ([][]byte, error) {
+
+	if !checkIsMultisigScript(expectedPubkeys, script) {
+		return nil, ErrUnsupportedScriptType
+	}
 	// Arrange the pubkeys and sigs into a slice of format:
 	// [[pub,sig], [pub,sig],..]
 	pubsSigs := [][][]byte{}
@@ -92,9 +104,8 @@ func extractKeyOrderFromScript(script []byte, expectedPubkeys [][]byte,
 }
 
 // getMultisigScriptWitness creates a full Witness field for the transaction,
-// given the public keys and signatures to be appended, assuming (currently
-// without validating; parseScript from txscript is not exported so it can't
-// be checked here) that the witnessScript is of type M of N multisig. This
+// given the public keys and signatures to be appended, after checking
+// that the redeemscript is of type M of N multisig. This
 // is used for both p2wsh and nested p2wsh multisig cases.
 func getMultisigScriptWitness(witnessScript []byte, pubKeys [][]byte,
 	sigs [][]byte) ([]byte, error) {
@@ -135,17 +146,17 @@ func checkSigHashFlags(sig []byte, input *PInput) bool {
 // isFinalized considers this input finalized if it contains
 // at least one of the FinalScriptSig or FinalScriptWitness
 // are filled (which only occurs in a successful call to Finalize*)
-func isFinalized(p *Psbt, idx int) bool {
-	input := p.Inputs[idx]
+func isFinalized(p *Psbt, inIndex int) bool {
+	input := p.Inputs[inIndex]
 	return input.FinalScriptSig != nil || input.FinalScriptWitness != nil
 }
 
 // isFinalizable checks whether the structure of the entry
-// for the input of the Psbt p at index idx contains sufficient
+// for the input of the Psbt p at index inIndex contains sufficient
 // information to finalize this input. Deduce the template
 // from the contents.
-func isFinalizable(p *Psbt, idx int) bool {
-	pInput := p.Inputs[idx]
+func isFinalizable(p *Psbt, inIndex int) bool {
+	pInput := p.Inputs[inIndex]
 
 	// Cannot be finalizable without any signatures
 	if pInput.PartialSigs == nil {
@@ -187,7 +198,7 @@ func isFinalizable(p *Psbt, idx int) bool {
 		if pInput.WitnessScript != nil {
 			return false
 		}
-		outIndex := p.UnsignedTx.TxIn[idx].PreviousOutPoint.Index
+		outIndex := p.UnsignedTx.TxIn[inIndex].PreviousOutPoint.Index
 		if txscript.IsPayToScriptHash(pInput.NonWitnessUtxo.TxOut[outIndex].PkScript) {
 			if pInput.RedeemScript == nil {
 				return false
@@ -205,17 +216,17 @@ func isFinalizable(p *Psbt, idx int) bool {
 	return true
 }
 
-// MaybeFinalize attempts to finalize the input at index idx
+// MaybeFinalize attempts to finalize the input at index inIndex
 // in the PSBT p, returning true with no error if it succeeds, OR
 // if the input has already been finalized.
-func MaybeFinalize(p *Psbt, idx int) (bool, error) {
-	if isFinalized(p, idx) {
+func MaybeFinalize(p *Psbt, inIndex int) (bool, error) {
+	if isFinalized(p, inIndex) {
 		return true, nil
 	}
-	if !isFinalizable(p, idx) {
+	if !isFinalizable(p, inIndex) {
 		return false, ErrNotFinalizable
 	}
-	err := Finalize(p, idx)
+	err := Finalize(p, inIndex)
 	if err != nil {
 		return false, err
 	}
@@ -243,16 +254,16 @@ func MaybeFinalizeAll(p *Psbt) error {
 // left intact as they may be needed for validation (?).
 // If there is any invalid or incomplete data, an error is
 // returned.
-func Finalize(p *Psbt, idx int) error {
+func Finalize(p *Psbt, inIndex int) error {
 	var err error
-	pInput := p.Inputs[idx]
+	pInput := p.Inputs[inIndex]
 	if pInput.WitnessUtxo != nil {
-		err = FinalizeWitness(p, idx)
+		err = FinalizeWitness(p, inIndex)
 		if err != nil {
 			return err
 		}
 	} else if pInput.NonWitnessUtxo != nil {
-		err = FinalizeNonWitness(p, idx)
+		err = FinalizeNonWitness(p, inIndex)
 		if err != nil {
 			return err
 		}
@@ -270,8 +281,8 @@ func Finalize(p *Psbt, idx int) error {
 // Psbt struct already has the fields 07 (FinalInScriptSig) or 08
 // (FinalInWitness). If so, it returns true. It does not modify the
 // Psbt.
-func checkFinalScriptSigWitness(p *Psbt, idx int) bool {
-	pInput := p.Inputs[idx]
+func checkFinalScriptSigWitness(p *Psbt, inIndex int) bool {
+	pInput := p.Inputs[inIndex]
 	if pInput.FinalScriptSig != nil {
 		return true
 	}
@@ -315,7 +326,10 @@ func FinalizeNonWitness(p *Psbt, inIndex int) error {
 	}
 
 	if !containsRedeemScript {
-		// p2pkh
+		// p2pkh - insist on one sig/pub and build scriptSig
+		if len(sigs) != 1 || len(pubKeys) != 1 {
+			return ErrNotFinalizable
+		}
 		builder := txscript.NewScriptBuilder()
 		builder.AddData(sigs[0]).AddData(pubKeys[0])
 		scriptSig, err = builder.Script()
@@ -422,7 +436,10 @@ func FinalizeWitness(p *Psbt, inIndex int) error {
 		}
 		if !cointainsWitnessScript {
 			// Assumed p2sh-p2wkh
-			// Here the witness is just (sig, pub)
+			// Here the witness is just (sig, pub) as for p2pkh case
+			if len(sigs) != 1 || len(pubKeys) != 1 {
+				return ErrNotFinalizable
+			}
 			witness, err = writePKHWitness(sigs[0], pubKeys[0])
 			if err != nil {
 				return err

@@ -123,6 +123,11 @@ var (
 	// according to the entry in PsbtInSighashType, or otherwise not the
 	// default value (SIGHASH_ALL)
 	ErrInvalidSigHashFlags = errors.New("Invalid Sighash Flags")
+
+	// ErrUnsupportedScriptType indicates that the redeem script or
+	// scriptwitness given is not supported by this codebase, or is otherwise
+	// not valid.
+	ErrUnsupportedScriptType = errors.New("Unsupported script type")
 )
 
 func serializeKVpair(w io.Writer, key []byte, value []byte) error {

@@ -53,10 +53,26 @@ func writePKHWitness(sig []byte, pub []byte) ([]byte, error) {
 // checkIsMultisigScript is a utility function to check wheter
 // a given redeemscript fits the standard multisig template used
 // in all p2sh based multisig, given a set of pubkeys for redemption.
-func checkIsMultisigScript(pubKeys [][]byte, script []byte) bool {
+func checkIsMultiSigScript(pubKeys [][]byte, sigs [][]byte,
+	script []byte) bool {
+
+	// First insist that the script type is multisig
 	if txscript.GetScriptClass(script) != txscript.MultiSigTy {
 		return false
 	}
+
+	// Inspect the script to ensure that the number of sigs and
+	// pubkeys is correct
+	numSigs, numPubKeys, err := txscript.CalcMultiSigStats(script)
+
+	if err != nil {
+		return false
+	}
+
+	if numPubKeys != len(pubKeys) || numSigs != len(sigs) {
+		return false
+	}
+
 	return true
 }
 
@@ -69,7 +85,7 @@ func checkIsMultisigScript(pubKeys [][]byte, script []byte) bool {
 func extractKeyOrderFromScript(script []byte, expectedPubkeys [][]byte,
 	sigs [][]byte) ([][]byte, error) {
 
-	if !checkIsMultisigScript(expectedPubkeys, script) {
+	if !checkIsMultiSigScript(expectedPubkeys, sigs, script) {
 		return nil, ErrUnsupportedScriptType
 	}
 	// Arrange the pubkeys and sigs into a slice of format:
@@ -105,7 +121,7 @@ func extractKeyOrderFromScript(script []byte, expectedPubkeys [][]byte,
 
 // getMultisigScriptWitness creates a full Witness field for the transaction,
 // given the public keys and signatures to be appended, after checking
-// that the redeemscript is of type M of N multisig. This
+// that the witnessScript is of type M of N multisig. This
 // is used for both p2wsh and nested p2wsh multisig cases.
 func getMultisigScriptWitness(witnessScript []byte, pubKeys [][]byte,
 	sigs [][]byte) ([]byte, error) {

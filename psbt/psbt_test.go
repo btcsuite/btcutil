@@ -895,8 +895,13 @@ func TestImportFromCore2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to add redeemscript to second input: %v", err)
 	}
-	//Add witnessScript, which here is multisig:
+	// Add witnessScript, which here is multisig:
 	witnessScript, err := hex.DecodeString("522103089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc21023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7352ae")
+	if err != nil {
+		t.Fatalf("Failed to decode hex: %v", err)
+	}
+	// To test multisig checks, add a nonsense version of the multisig script
+	witnessScriptNonsense, err := hex.DecodeString("52ffff")
 	if err != nil {
 		t.Fatalf("Failed to decode hex: %v", err)
 	}
@@ -904,7 +909,7 @@ func TestImportFromCore2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to add witnessscript to second input: %v", err)
 	}
-	// Add the two partial signatures
+	// Construct the two partial signatures to be added
 	sig21, err := hex.DecodeString("3044022062eb7a556107a7c73f45ac4ab5a1dddf6f7075fb1275969a7f383efff784bcb202200c05dbb7470dbf2f08557dd356c7325c1ed30913e996cd3840945db12228da5f01")
 	if err != nil {
 		t.Fatalf("Failed to decode hex: %v", err)
@@ -922,8 +927,40 @@ func TestImportFromCore2(t *testing.T) {
 		t.Fatalf("Failed to decode hex: %v", err)
 	}
 	res, err = psbtupdater2.Sign(1, sig21, pub21, nil, nil)
-	res, err = psbtupdater2.Sign(1, sig22, pub22, nil, nil)
+
+	// Check that the finalization procedure fails here due to not
+	// meeting the multisig policy
 	success, err := MaybeFinalize(psbt2, 1)
+	if success {
+		t.Fatalf("Incorrectly succeeded in finalizing without sigs")
+	}
+	if err != ErrUnsupportedScriptType {
+		t.Fatalf("Got unexpected error type: %v", err)
+	}
+
+	res, err = psbtupdater2.Sign(1, sig22, pub22, nil, nil)
+
+	// Check that the finalization procedure also fails with a nonsense
+	// script
+	err = psbtupdater2.AddInWitnessScript(witnessScriptNonsense, 1)
+	if err != nil {
+		t.Fatalf("Failed to add witnessscript to second input: %v", err)
+	}
+	success, err = MaybeFinalize(psbt2, 1)
+	if success {
+		t.Fatalf("Incorrectly succeeded in finalizing with invalid msigscript")
+	}
+	if err != ErrUnsupportedScriptType {
+		t.Fatalf("Got unexpected error type: %v", err)
+	}
+
+	// Restore the correct witnessScript to complete correctly
+	err = psbtupdater2.AddInWitnessScript(witnessScript, 1)
+	if err != nil {
+		t.Fatalf("Failed to add witnessscript to second input: %v", err)
+	}
+
+	success, err = MaybeFinalize(psbt2, 1)
 	if !success {
 		if err != nil {
 			t.Fatalf("Failed to finalize second input: %v", err)

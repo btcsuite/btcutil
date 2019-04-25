@@ -119,7 +119,7 @@ func BuildGCSFilter(P uint8, M uint64, key [KeySize]byte, data [][]byte) (*Filte
 	}
 
 	// Build the filter.
-	values := make(uint64Slice, 0, len(data))
+	values := make([]uint64, 0, len(data))
 	b := bstream.NewBStreamWriter(0)
 
 	// Insert the hash (fast-ranged over a space of N*P) of each data
@@ -138,7 +138,7 @@ func BuildGCSFilter(P uint8, M uint64, key [KeySize]byte, data [][]byte) (*Filte
 		v = fastReduction(v, nphi, nplo)
 		values = append(values, v)
 	}
-	sort.Sort(values)
+	sort.Slice(values, func(i, j int) bool { return values[i] < values[j] })
 
 	// Write the sorted list of values into the filter bitstream,
 	// compressing it using Golomb coding.
@@ -365,7 +365,7 @@ func (f *Filter) ZipMatchAny(key [KeySize]byte, data [][]byte) (bool, error) {
 	b := bstream.NewBStreamReader(filterData)
 
 	// Create an uncompressed filter of the search values.
-	values := make(uint64Slice, 0, len(data))
+	values := make([]uint64, 0, len(data))
 
 	// First, we cache the high and low bits of modulusNP for the
 	// multiplication of 2 64-bit integers into a 128-bit integer.
@@ -380,7 +380,7 @@ func (f *Filter) ZipMatchAny(key [KeySize]byte, data [][]byte) (bool, error) {
 		v = fastReduction(v, nphi, nplo)
 		values = append(values, v)
 	}
-	sort.Sort(values)
+	sort.Slice(values, func(i, j int) bool { return values[i] < values[j] })
 
 	// Zip down the filters, comparing values until we either run out of
 	// values to compare in one of the filters or we reach a matching

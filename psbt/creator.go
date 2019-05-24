@@ -18,14 +18,14 @@ type Creator struct {
 	Cpsbt *Psbt
 }
 
-// createPsbt, on provision of an input and output 'skeleton' for
+// CreatePsbt , on provision of an input and output 'skeleton' for
 // the transaction, returns a Creator struct.
 // Note that we require OutPoints and not TxIn structs, as we will
 // only populate the txid:n information, *not* any scriptSig/witness
 // information. The values of nLockTime, nSequence (per input) and
 // transaction version (must be 1 of 2) must be specified here. Note
 // that the default nSequence value is wire.MaxTxInSequenceNum.
-func (c *Creator) createPsbt(inputs []*wire.OutPoint,
+func (c *Creator) CreatePsbt(inputs []*wire.OutPoint,
 	outputs []*wire.TxOut, Version int32, nLockTime uint32,
 	nSequences []uint32) error {
 	// Create the new struct; the input and output lists will be empty,

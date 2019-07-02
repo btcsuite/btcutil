@@ -113,7 +113,7 @@ func (bf *Filter) Unload() {
 }
 
 // hash returns the bit offset in the bloom filter which corresponds to the
-// passed data for the given indepedent hash function number.
+// passed data for the given independent hash function number.
 func (bf *Filter) hash(hashNum uint32, data []byte) uint32 {
 	// bitcoind: 0xfba4c795 chosen as it guarantees a reasonable bit
 	// difference between hashNum values.
@@ -309,7 +309,7 @@ func (bf *Filter) matchTxAndUpdate(tx *btcutil.Tx) bool {
 	// public key scripts of its outputs matched.
 
 	// Check if the filter matches any outpoints this transaction spends or
-	// any any data elements in the signature scripts of any of the inputs.
+	// any data elements in the signature scripts of any of the inputs.
 	for _, txin := range tx.MsgTx().TxIn {
 		if bf.matchesOutPoint(&txin.PreviousOutPoint) {
 			return true

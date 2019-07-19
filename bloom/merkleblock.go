@@ -23,8 +23,8 @@ type merkleBlock struct {
 
 // calcTreeWidth calculates and returns the the number of nodes (width) or a
 // merkle tree at the given depth-first height.
-func (m *merkleBlock) calcTreeWidth(height uint32) uint32 {
-	return (m.numTx + (1 << height) - 1) >> height
+func calcTreeWidth(numTx, height uint32) uint32 {
+	return (numTx + (1 << height) - 1) >> height
 }
 
 // calcHash returns the hash for a sub-tree given a depth-first height and
@@ -36,7 +36,7 @@ func (m *merkleBlock) calcHash(height, pos uint32) *chainhash.Hash {
 
 	var right *chainhash.Hash
 	left := m.calcHash(height-1, pos*2)
-	if pos*2+1 < m.calcTreeWidth(height-1) {
+	if pos*2+1 < calcTreeWidth(m.numTx, height-1) {
 		right = m.calcHash(height-1, pos*2+1)
 	} else {
 		right = left
@@ -72,7 +72,7 @@ func (m *merkleBlock) traverseAndBuild(height, pos uint32) {
 
 	// Descend into the right child and process its sub-tree if
 	// there is one.
-	if pos*2+1 < m.calcTreeWidth(height-1) {
+	if pos*2+1 < calcTreeWidth(m.numTx, height-1) {
 		m.traverseAndBuild(height-1, pos*2+1)
 	}
 }
@@ -108,7 +108,7 @@ func newMerkleBlock(block *btcutil.Block, filter *Filter,
 
 	// Calculate the number of merkle branches (height) in the tree.
 	height := uint32(0)
-	for mBlock.calcTreeWidth(height) > 1 {
+	for calcTreeWidth(mBlock.numTx, height) > 1 {
 		height++
 	}
 

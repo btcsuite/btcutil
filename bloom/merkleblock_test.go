@@ -71,4 +71,18 @@ func TestMerkleBlock3(t *testing.T) {
 			"got %v want %v", got.Bytes(), want)
 		return
 	}
+
+	// Ensure we can validate the proof and extract the transactions it
+	// commits to.
+	committedTxIDs := bloom.ExtractCommittedTxIDs(mBlock)
+	if len(committedTxIDs) != 1 {
+		t.Errorf("expected merkle block to commit to %v transactions, "+
+			"got %v", 1, len(committedTxIDs))
+		return
+	}
+	if !committedTxIDs[0].IsEqual(hash) {
+		t.Errorf("expected merkle block to commit to %v, got %v", hash,
+			committedTxIDs[0])
+		return
+	}
 }

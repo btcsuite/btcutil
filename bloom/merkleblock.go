@@ -143,3 +143,168 @@ func NewMerkleBlockWithTxs(block *btcutil.Block,
 	txids map[chainhash.Hash]struct{}) (*wire.MsgMerkleBlock, []uint32) {
 	return newMerkleBlock(block, nil, txids)
 }
+
+// merkleBlockVerifier is a helper struct that facilitates the verification of a
+// merkle proof.
+type merkleBlockVerifier struct {
+	// numTx is the number of transactions in the block.
+	numTx uint32
+
+	// merkleRoot is the expected merkle root we should arrive at after
+	// fully traversing the tree.
+	merkleRoot chainhash.Hash
+
+	// proof is the list of hashes we'll use to arrive at the merkle root of
+	// the tree.
+	proof []*chainhash.Hash
+
+	// bits is the list of bits we'll use to arrive at the merkle root of
+	// the tree. If the bit is set, then we'll need to continue traversing
+	// the tree.
+	bits []byte
+
+	// numBits is the total number of bits. We'll use this after traversing
+	// the tree to ensure we consumed all of them except for those that
+	// serve as padding.
+	numBits int
+
+	// committedTxIDs is the list of transactions the merkle proof
+	// committed to.
+	committedTxIDs []*chainhash.Hash
+}
+
+// newMerkleBlockVerifier constructs a verifier for a given merkle proof.
+func newMerkleBlockVerifier(merkleBlock *wire.MsgMerkleBlock) *merkleBlockVerifier {
+	proof := make([]*chainhash.Hash, 0, len(merkleBlock.Hashes))
+	for _, hash := range merkleBlock.Hashes {
+		proof = append(proof, hash)
+	}
+
+	// When traversing through the tree, the bits will be interpreted in
+	// little endian, so we'll extract them in that order.
+	bits := make([]byte, 0, len(merkleBlock.Flags)*8)
+	for _, flag := range merkleBlock.Flags {
+		for i := byte(0); i < 8; i++ {
+			var bit byte
+			if flag&(1<<i) != 0 {
+				bit = 0x01
+			}
+			bits = append(bits, bit)
+		}
+	}
+
+	return &merkleBlockVerifier{
+		numTx:      merkleBlock.Transactions,
+		merkleRoot: merkleBlock.Header.MerkleRoot,
+		proof:      proof,
+		bits:       bits,
+		numBits:    len(bits),
+	}
+}
+
+// traverseAndExtract traverses the merkle proof to arrive at the expected
+// merkle root. Any transactions that the proof commits to are added to the
+// committedTxIDs slice within the verifier.
+func (v *merkleBlockVerifier) traverseAndExtract(height, pos uint32) *chainhash.Hash {
+	// If we've consumed all of our bits, but we've yet to finish traversing
+	// the tree, there's nothing else we can do.
+	if len(v.bits) == 0 {
+		return &chainhash.Hash{}
+	}
+
+	// Otherwise, we'll pop off the next bit of the stack.
+	nextBit := v.bits[0]
+	v.bits = v.bits[1:]
+	isParent := nextBit != 0
+
+	// If the bit isn't set or we're at the leaf level of the tree, then
+	// there's no need to traverse it as we won't find anything relevant.
+	// Therefore, we'll use the next hash and continue to the next node.
+	if !isParent || height == 0 {
+		// If we've consumed all of our proof, but we've yet to finish
+		// traversing the tree, there's nothing else we can do.
+		if len(v.proof) == 0 {
+			return &chainhash.Hash{}
+		}
+
+		// Otherwise, we'll obtain the next hash of the proof.
+		nextHash := v.proof[0]
+		v.proof = v.proof[1:]
+
+		// If the hash is found to be a relevant leaf, we'll add it to
+		// our list of committed transactions.
+		if height == 0 && isParent {
+			v.committedTxIDs = append(v.committedTxIDs, nextHash)
+		}
+
+		return nextHash
+	}
+
+	// Otherwise, the bit is set, so we'll need to traverse the tree one
+	// level down. We'll determine if there is a right child based on the
+	// number of transactions and the tree height. If there isn't one, we'll
+	// hash the left child with itself.
+	left := v.traverseAndExtract(height-1, pos*2)
+	var right *chainhash.Hash
+	if pos*2+1 < calcTreeWidth(v.numTx, height-1) {
+		right = v.traverseAndExtract(height-1, pos*2+1)
+	} else {
+		right = left
+	}
+
+	return blockchain.HashMerkleBranches(left, right)
+}
+
+// verify verifies the merkle proof is valid. It is considered valid if the end
+// result matches the expected merkle root of the block.
+func (v *merkleBlockVerifier) verify() bool {
+	// A merkle proof cannot commit to 0 transactions.
+	if v.numTx == 0 {
+		return false
+	}
+
+	// The number of hashes in a merkle proof cannot be greater than the
+	// number of transactions in the block.
+	if uint32(len(v.proof)) > v.numTx {
+		return false
+	}
+
+	// A merkle proof should have at least one bit per hash.
+	if len(v.bits) < len(v.proof) {
+		return false
+	}
+
+	// Calculate the height of the merkle tree based on the number of
+	// transactions within the block.
+	height := uint32(0)
+	for calcTreeWidth(v.numTx, height) > 1 {
+		height++
+	}
+
+	// With the height obtained, we can begin to traverse the tree to arrive
+	// at the merkle root.
+	merkleRoot := v.traverseAndExtract(height, 0)
+
+	// The traversal should've consumed all the bits (except for those that
+	// serve as padding) and hashes within the proof, otherwise it is
+	// invalid.
+	if ((v.numBits-len(v.bits))+7)/8 != (v.numBits+7)/8 {
+		return false
+	}
+	if len(v.proof) > 0 {
+		return false
+	}
+
+	return merkleRoot.IsEqual(&v.merkleRoot)
+}
+
+// ExtractCommittedTxIDs extracts the txids that were committed in the merkle
+// proof if it's found to be valid.
+func ExtractCommittedTxIDs(merkleBlock *wire.MsgMerkleBlock) []*chainhash.Hash {
+	verifier := newMerkleBlockVerifier(merkleBlock)
+	valid := verifier.verify()
+	if !valid {
+		return nil
+	}
+	return verifier.committedTxIDs
+}

@@ -77,9 +77,11 @@ func (m *merkleBlock) traverseAndBuild(height, pos uint32) {
 	}
 }
 
-// NewMerkleBlock returns a new *wire.MsgMerkleBlock and an array of the matched
-// transaction index numbers based on the passed block and filter.
-func NewMerkleBlock(block *btcutil.Block, filter *Filter) (*wire.MsgMerkleBlock, []uint32) {
+// newMerkleBlock returns a new *wire.MsgMerkleBlock and an array of the matched
+// transaction index numbers based on the passed block, filter, and txid set.
+func newMerkleBlock(block *btcutil.Block, filter *Filter,
+	txids map[chainhash.Hash]struct{}) (*wire.MsgMerkleBlock, []uint32) {
+
 	numTx := uint32(len(block.Transactions()))
 	mBlock := merkleBlock{
 		numTx:       numTx,
@@ -90,13 +92,18 @@ func NewMerkleBlock(block *btcutil.Block, filter *Filter) (*wire.MsgMerkleBlock,
 	// Find and keep track of any transactions that match the filter.
 	var matchedIndices []uint32
 	for txIndex, tx := range block.Transactions() {
-		if filter.MatchTxAndUpdate(tx) {
+		txHash := tx.Hash()
+		matched := false
+		if txids != nil {
+			_, matched = txids[*txHash]
+		}
+		if matched || (filter != nil && filter.MatchTxAndUpdate(tx)) {
 			mBlock.matchedBits = append(mBlock.matchedBits, 0x01)
 			matchedIndices = append(matchedIndices, uint32(txIndex))
 		} else {
 			mBlock.matchedBits = append(mBlock.matchedBits, 0x00)
 		}
-		mBlock.allHashes = append(mBlock.allHashes, tx.Hash())
+		mBlock.allHashes = append(mBlock.allHashes, txHash)
 	}
 
 	// Calculate the number of merkle branches (height) in the tree.
@@ -122,4 +129,17 @@ func NewMerkleBlock(block *btcutil.Block, filter *Filter) (*wire.MsgMerkleBlock,
 		msgMerkleBlock.Flags[i/8] |= mBlock.bits[i] << (i % 8)
 	}
 	return &msgMerkleBlock, matchedIndices
+}
+
+// NewMerkleBlock returns a new *wire.MsgMerkleBlock and an array of the matched
+// transaction index numbers based on the passed block and filter.
+func NewMerkleBlock(block *btcutil.Block, filter *Filter) (*wire.MsgMerkleBlock, []uint32) {
+	return newMerkleBlock(block, filter, nil)
+}
+
+// NewMerkleBlockWithTxs returns a new *wire.MsgMerkleBlock and an array of the
+// matched transaction index numbers based on the passed block and transactions.
+func NewMerkleBlockWithTxs(block *btcutil.Block,
+	txids map[chainhash.Hash]struct{}) (*wire.MsgMerkleBlock, []uint32) {
+	return newMerkleBlock(block, nil, txids)
 }

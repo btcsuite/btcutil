@@ -106,8 +106,8 @@ var masterKey = []byte("Bitcoin seed")
 // deterministic extended key.  See the package overview documentation for
 // more details on how to use extended keys.
 type ExtendedKey struct {
-	key       []byte // This will be the pubkey for extended pub keys
-	pubKey    []byte // This will only be set for extended priv keys
+	key       []byte // This will only be set for extended priv keys
+	pubKey    []byte // This will be the pubkey for extended pub keys
 	chainCode []byte
 	depth     uint8
 	parentFP  []byte

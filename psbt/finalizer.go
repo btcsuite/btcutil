@@ -63,13 +63,13 @@ func checkIsMultiSigScript(pubKeys [][]byte, sigs [][]byte,
 
 	// Inspect the script to ensure that the number of sigs and
 	// pubkeys is correct
-	numSigs, numPubKeys, err := txscript.CalcMultiSigStats(script)
+	_, numSigs, err := txscript.CalcMultiSigStats(script)
 
 	if err != nil {
 		return false
 	}
 
-	if numPubKeys != len(pubKeys) || numSigs != len(sigs) {
+	if numSigs != len(pubKeys) || numSigs != len(sigs) {
 		return false
 	}
 

@@ -25,7 +25,8 @@ import (
 // extracting it. Returned are: an unsigned transaction serialization, a list
 // of scriptSigs, one per input, and a list of witnesses, one per input.
 func createPsbtFromSignedTx(serializedSignedTx []byte) (
-	*Psbt, [][]byte, []wire.TxWitness, error) {
+	*Packet, [][]byte, []wire.TxWitness, error) {
+
 	tx := wire.NewMsgTx(2)
 	err := tx.Deserialize(bytes.NewReader(serializedSignedTx))
 	if err != nil {
@@ -34,6 +35,7 @@ func createPsbtFromSignedTx(serializedSignedTx []byte) (
 	scriptSigs := make([][]byte, 0, len(tx.TxIn))
 	witnesses := make([]wire.TxWitness, 0, len(tx.TxIn))
 	tx2 := tx.Copy()
+
 	// Blank out signature info in inputs
 	for i, tin := range tx2.TxIn {
 		tin.SignatureScript = nil
@@ -42,10 +44,10 @@ func createPsbtFromSignedTx(serializedSignedTx []byte) (
 		witnesses = append(witnesses, tx.TxIn[i].Witness)
 
 	}
-	// Outputs always contain (value, scriptPubkey so don't need amending)
 
-	// Now tx2 is tx with all signing data stripped out
-	unsignedPsbt, err := NewPsbtFromUnsignedTx(tx2)
+	// Outputs always contain: (value, scriptPubkey) so don't need
+	// amending.  Now tx2 is tx with all signing data stripped out
+	unsignedPsbt, err := NewFromUnsignedTx(tx2)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -116,16 +118,24 @@ func TestReadValidPsbtAndReserialize(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unable to decode hex: %v", err)
 		}
-		testPsbt, err := NewPsbt(PsbtBytes, false)
+
+		testPsbt, err := NewFromRawBytes(
+			bytes.NewReader(PsbtBytes), false,
+		)
 		if err != nil {
 			t.Fatalf("unable to parse psbt: %v", err)
 		}
+
 		t.Logf("Successfully parsed test, got transaction: %v",
 			spew.Sdump(testPsbt.UnsignedTx))
-		raw, err := testPsbt.Serialize()
+
+		var b bytes.Buffer
+		err = testPsbt.Serialize(&b)
 		if err != nil {
 			t.Fatalf("Unable to serialize created Psbt: %v", err)
 		}
+
+		raw := b.Bytes()
 		if !bytes.Equal(raw, PsbtBytes) {
 			t.Fatalf("Serialized PSBT didn't match: %v",
 				hex.EncodeToString(raw))
@@ -139,11 +149,13 @@ func TestReadInvalidPsbt(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unable to decode hex: %v", err)
 		}
-		_, err = NewPsbt(PsbtBytes, false)
+
+		_, err = NewFromRawBytes(bytes.NewReader(PsbtBytes), false)
 		if err == nil {
 			t.Fatalf("Incorrectly validated psbt: %v",
 				hex.EncodeToString(PsbtBytes))
 		}
+
 		t.Logf("Correctly got error: %v", err)
 	}
 }
@@ -165,14 +177,16 @@ func TestSanityCheck(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to decode hex: %v", err)
 	}
-	psbt1, err := NewPsbt(psbtraw1, false)
+	psbt1, err := NewFromRawBytes(bytes.NewReader(psbtraw1), false)
 	if err != nil {
 		t.Fatalf("Unable to create Psbt struct: %v", err)
 	}
+
 	// Add a non-witness utxo field to input2 using raw insertion function,
-	// so that it becomes invalid, then NewUpdater should fail:
+	// so that it becomes invalid, then NewUpdater should fail.
 	nonWitnessUtxoRaw, err := hex.DecodeString(
-		CUTestHexData["NonWitnessUtxo"])
+		CUTestHexData["NonWitnessUtxo"],
+	)
 	if err != nil {
 		t.Fatalf("Unable to decode hex: %v", err)
 	}
@@ -183,22 +197,26 @@ func TestSanityCheck(t *testing.T) {
 	}
 	inputs1 := &psbt1.Inputs[1]
 	inputs1.NonWitnessUtxo = nonWitnessUtxo
-	// The PSBT is now in an inconsistent state; Updater creation should fail
+
+	// The PSBT is now in an inconsistent state; Updater creation should
+	// fail.
 	updater, err := NewUpdater(psbt1)
 	if err == nil {
 		t.Fatalf("Failed to identify invalid PSBT state ( " +
 			"witness, non-witness fields)")
 	}
+
 	// Overwrite back with the correct psbt
 	psbtraw1, err = hex.DecodeString(validPsbtHex[1])
 	if err != nil {
 		t.Fatalf("Unable to decode hex: %v", err)
 	}
-	psbt1, err = NewPsbt(psbtraw1, false)
+	psbt1, err = NewFromRawBytes(bytes.NewReader(psbtraw1), false)
 	updater, err = NewUpdater(psbt1)
 	if err != nil {
 		t.Fatalf("Unable to create Updater: %v", err)
 	}
+
 	// Create a fake non-witness utxo field to overlap with
 	// the existing witness input at index 1.
 	tx := wire.NewMsgTx(2)
@@ -211,10 +229,13 @@ func TestSanityCheck(t *testing.T) {
 		t.Fatalf("Incorrectly accepted Psbt with conflicting witness " +
 			"and non-witness utxo entries in the same input.")
 	}
+
 	// Now we try again; this time we try to add a witnessScript
 	// key-value pair to an input which is non-witness, which should
 	// also be rejected.
-	psbt2, err := NewPsbt(psbtraw1, false)
+	psbt2, err := NewFromRawBytes(
+		bytes.NewReader(psbtraw1), false,
+	)
 	if err != nil {
 		t.Fatalf("Unable to create Psbt struct: %v", err)
 	}
@@ -232,7 +253,6 @@ func TestSanityCheck(t *testing.T) {
 		t.Fatalf("Incorrectly accepted adding witness script field " +
 			"to non-witness utxo")
 	}
-
 }
 
 // Data for creation and updating tests
@@ -319,33 +339,37 @@ func TestPsbtCreator(t *testing.T) {
 	}
 	prevOut2 := wire.NewOutPoint(hash2, uint32(1))
 	inputs := []*wire.OutPoint{prevOut1, prevOut2}
-	creator := Creator{}
+
 	// Check creation fails with invalid sequences:
 	nSequences := []uint32{wire.MaxTxInSequenceNum}
-	err = creator.CreatePsbt(inputs, outputs, int32(3), uint32(0), nSequences)
+	_, err = New(inputs, outputs, int32(3), uint32(0), nSequences)
 	if err == nil {
 		t.Fatalf("Did not error when creating transaction with " +
 			"invalid nSequences")
 	}
 	nSequences = append(nSequences, wire.MaxTxInSequenceNum)
+
 	// Check creation fails with invalid version
-	err = creator.CreatePsbt(inputs, outputs, int32(3), uint32(0), nSequences)
+	_, err = New(inputs, outputs, int32(0), uint32(0), nSequences)
 	if err == nil {
 		t.Fatalf("Did not error when creating transaction with " +
 			"invalid version (3)")
 	}
+
 	// Use valid data to create:
-	creator.CreatePsbt(inputs, outputs, int32(2), uint32(0), nSequences)
-	rawCreated, err := creator.Cpsbt.Serialize()
+	cPsbt, err := New(inputs, outputs, int32(2), uint32(0), nSequences)
+	var b bytes.Buffer
+	err = cPsbt.Serialize(&b)
 	if err != nil {
 		t.Fatalf("Unable to serialize created Psbt: %v", err)
 	}
-	if CUTestHexData["COPsbtHex"] != hex.EncodeToString(rawCreated) {
+	if CUTestHexData["COPsbtHex"] != hex.EncodeToString(b.Bytes()) {
 		t.Fatalf("Failed to create expected psbt, instead got: %v",
-			hex.EncodeToString(rawCreated))
+			hex.EncodeToString(b.Bytes()))
 	}
+
 	// Now simulate passing the created PSBT to an Updater
-	updater, err := NewUpdater(creator.Cpsbt)
+	updater, err := NewUpdater(cPsbt)
 	if err != nil {
 		t.Fatalf("Unable to create Updater object")
 	}
@@ -375,11 +399,13 @@ func TestPsbtCreator(t *testing.T) {
 		t.Fatalf("Unable to add Witness Utxo to inputs: %v", err)
 	}
 
-	rawUpdated, err := updater.Upsbt.Serialize()
+	b.Reset()
+
+	err = updater.Upsbt.Serialize(&b)
 	if err != nil {
 		t.Fatalf("Unable to serialize updated Psbt: %v", err)
 	}
-	if CUTestHexData["UOPsbtHex"] != hex.EncodeToString(rawUpdated) {
+	if CUTestHexData["UOPsbtHex"] != hex.EncodeToString(b.Bytes()) {
 		t.Fatal("Failed to create valid updated PSBT after utxos")
 	}
 	input1RedeemScript, err := hex.DecodeString(CUTestHexData["Input1RedeemScript"])
@@ -406,11 +432,13 @@ func TestPsbtCreator(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to add witness script: %v", err)
 	}
-	rawUpdated, err = updater.Upsbt.Serialize()
+
+	b.Reset()
+	err = updater.Upsbt.Serialize(&b)
 	if err != nil {
 		t.Fatalf("Unable to serialize updated Psbt: %v", err)
 	}
-	if CUTestHexData["UOPsbtHex2"] != hex.EncodeToString(rawUpdated) {
+	if CUTestHexData["UOPsbtHex2"] != hex.EncodeToString(b.Bytes()) {
 		t.Fatal("Failed to create valid updated PSBT after redeem scripts")
 	}
 	masterKey, err := hex.DecodeString(CUMasterKeyFingerPrint)
@@ -490,11 +518,13 @@ func TestPsbtCreator(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed to add key to second output")
 	}
-	rawUpdated, err = updater.Upsbt.Serialize()
+
+	b.Reset()
+	err = updater.Upsbt.Serialize(&b)
 	if err != nil {
 		t.Fatalf("Unable to serialize updated Psbt: %v", err)
 	}
-	if CUTestHexData["UOPsbtHex3"] != hex.EncodeToString(rawUpdated) {
+	if CUTestHexData["UOPsbtHex3"] != hex.EncodeToString(b.Bytes()) {
 		t.Fatal("Failed to create valid updated PSBT after BIP32 derivations")
 	}
 	err = updater.AddInSighashType(txscript.SigHashType(1), 0)
@@ -505,11 +535,13 @@ func TestPsbtCreator(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed to add sighash type to second input")
 	}
-	rawUpdated, err = updater.Upsbt.Serialize()
+
+	b.Reset()
+	err = updater.Upsbt.Serialize(&b)
 	if err != nil {
 		t.Fatalf("Unable to serialize updated Psbt: %v", err)
 	}
-	if CUTestHexData["UOPsbtHex4"] != hex.EncodeToString(rawUpdated) {
+	if CUTestHexData["UOPsbtHex4"] != hex.EncodeToString(b.Bytes()) {
 		t.Fatal("Failed to create valid updated PSBT after sighash types")
 	}
 	b644, err := updater.Upsbt.B64Encode()
@@ -536,7 +568,10 @@ var signerPsbtData = map[string]string{
 }
 
 func TestPsbtSigner(t *testing.T) {
-	psbt1, err := NewPsbt([]byte(signerPsbtData["signer1PsbtB64"]), true)
+	psbt1, err := NewFromRawBytes(
+		bytes.NewReader([]byte(signerPsbtData["signer1PsbtB64"])),
+		true,
+	)
 	if err != nil {
 		t.Fatalf("Failed to parse PSBT: %v", err)
 	}
@@ -559,11 +594,13 @@ func TestPsbtSigner(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to decode hex: %v", err)
 	}
-	rawUpdated, err := psbtUpdater1.Upsbt.Serialize()
+
+	var b bytes.Buffer
+	err = psbtUpdater1.Upsbt.Serialize(&b)
 	if err != nil {
 		t.Fatalf("Unable to serialize updated Psbt: %v", err)
 	}
-	if !bytes.Equal(rawUpdated, signer1Result) {
+	if !bytes.Equal(b.Bytes(), signer1Result) {
 		t.Fatalf("Failed to add signatures correctly")
 	}
 }
@@ -580,12 +617,15 @@ var finalizerPsbtData = map[string]string{
 
 func TestPsbtExtractor(t *testing.T) {
 	rawToFinalize, err := base64.StdEncoding.DecodeString(
-		finalizerPsbtData["finalizeb64"])
+		finalizerPsbtData["finalizeb64"],
+	)
 	if err != nil {
 		t.Fatalf("Error decoding b64: %v", err)
 	}
 
-	psbt1, err := NewPsbt(rawToFinalize, false)
+	psbt1, err := NewFromRawBytes(
+		bytes.NewReader(rawToFinalize), false,
+	)
 	if err != nil {
 		t.Fatalf("Failed to parse PSBT: %v", err)
 	}
@@ -598,7 +638,8 @@ func TestPsbtExtractor(t *testing.T) {
 	}
 
 	finalizer1Result, err := base64.StdEncoding.DecodeString(
-		finalizerPsbtData["resultb64"])
+		finalizerPsbtData["resultb64"],
+	)
 	if err != nil {
 		t.Fatalf("Unable to decode b64: %v", err)
 	}
@@ -606,19 +647,26 @@ func TestPsbtExtractor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to decode hex: %v", err)
 	}
-	resultToNetwork, err := Extract(psbt1)
+	tx, err := Extract(psbt1)
 	if err != nil {
 		t.Fatalf("Failed to extract: %v", err)
 	}
-	rawPsbt1, err := psbt1.Serialize()
+	var resultToNetwork bytes.Buffer
+	if err := tx.Serialize(&resultToNetwork); err != nil {
+		t.Fatalf("unable to serialize: %v", err)
+	}
+
+	var b bytes.Buffer
+	err = psbt1.Serialize(&b)
 	if err != nil {
 		t.Fatalf("Unable to serialize updated Psbt: %v", err)
 	}
-	if !bytes.Equal(rawPsbt1, finalizer1Result) {
-		t.Fatalf("Failed to finalize transaction %x", rawPsbt1)
+	if !bytes.Equal(b.Bytes(), finalizer1Result) {
+		t.Fatalf("Failed to finalize transaction: expected %x, "+
+			"got %x", finalizer1Result, b.Bytes())
 	}
-	if !bytes.Equal(finalToNetworkExpected, resultToNetwork) {
-		t.Fatalf("Failed to network serialize transaction: %x", resultToNetwork)
+	if !bytes.Equal(finalToNetworkExpected, resultToNetwork.Bytes()) {
+		t.Fatalf("Failed to network serialize transaction: %x", b.Bytes())
 	}
 }
 
@@ -629,7 +677,7 @@ func TestImportFromCore1(t *testing.T) {
 	// separately, then finalize and extract, and compare with the network
 	// serialized tx output from Core.
 	imported := "cHNidP8BAJwCAAAAAjaoF6eKeGsPiDQxxqqhFDfHWjBtZzRqmaZmvyCVWZ5JAQAAAAD/////RhypNiFfnQSMNpo0SGsgIvDOyMQFAYEHZXD5jp4kCrUAAAAAAP////8CgCcSjAAAAAAXqRQFWy8ScSkkhlGMwfOnx15YwRzApofwX5MDAAAAABepFAt4TyLfGnL9QY6GLYHbpSQj+QclhwAAAAAAAAAAAA=="
-	psbt1, err := NewPsbt([]byte(imported), true)
+	psbt1, err := NewFromRawBytes(bytes.NewReader([]byte(imported)), true)
 	if err != nil {
 		t.Fatalf("Failed to parse PSBT: %v", err)
 	}
@@ -709,7 +757,7 @@ func TestImportFromCore1(t *testing.T) {
 	// modifications to the input data and check it fails sanity checks.
 
 	// First an invalid tx:
-	psbtBorkedInput2, _ := NewPsbt([]byte(imported), true)
+	psbtBorkedInput2, _ := NewFromRawBytes(bytes.NewReader([]byte(imported)), true)
 	borkedUpdater, err := NewUpdater(psbtBorkedInput2)
 	if err != nil {
 		t.Fatalf("NewUpdater failed while trying to create borked "+
@@ -759,15 +807,23 @@ func TestImportFromCore1(t *testing.T) {
 		t.Fatalf("Failed to finalize second input, %v", err)
 	}
 
-	networkSerializedTx, err := Extract(psbt1)
+	tx, err := Extract(psbt1)
+	if err != nil {
+		t.Fatalf("unable to extract tx: %v", err)
+	}
+	var networkSerializedTx bytes.Buffer
+	if err := tx.Serialize(&networkSerializedTx); err != nil {
+		t.Fatalf("unable to encode tx: %v", err)
+	}
+
 	expectedTx := "0200000000010236a817a78a786b0f883431c6aaa11437c75a306d67346a99a666bf2095599e490100000000ffffffff461ca936215f9d048c369a34486b2022f0cec8c4050181076570f98e9e240ab5000000006a473044022014eb9c4858f71c9f280bc68402aa742a5187f54c56c8eb07c902eb1eb5804e5502203d66656de8386b9b044346d5605f5ae2b200328fb30476f6ac993fc0dbb04559012103b4c79acdf4e7d978bef4019c421e4c6c67044ed49d27322dc90e808d8080e862ffffffff028027128c0000000017a914055b2f1271292486518cc1f3a7c75e58c11cc0a687f05f93030000000017a9140b784f22df1a72fd418e862d81dba52423f90725870247304402200da03ac9890f5d724c42c83c2a62844c08425a274f1a5bca50dcde4126eb20dd02205278897b65cb8e390a0868c9582133c7157b2ad3e81c1c70d8fbd65f51a5658b0121024d6b24f372dd4551277c8df4ecc0655101e11c22894c8e05a3468409c865a72c0000000000"
 	expectedTxBytes, err := hex.DecodeString(expectedTx)
 	if err != nil {
 		t.Fatalf("Unable to decode hex: %v", err)
 	}
-	if !bytes.Equal(expectedTxBytes, networkSerializedTx) {
+	if !bytes.Equal(expectedTxBytes, networkSerializedTx.Bytes()) {
 		t.Fatalf("The produced network transaction did not match the expected: %x \n %x \n",
-			networkSerializedTx, expectedTxBytes)
+			networkSerializedTx.Bytes(), expectedTxBytes)
 	}
 
 }
@@ -787,7 +843,7 @@ func TestImportFromCore2(t *testing.T) {
 	// the previous example, we cannot here compare with a Core produced
 	// network serialized final transaction, because of the fake input.
 	imported := "cHNidP8BAJsCAAAAAkxTQ+rig5QNnUS5nMc+Pccow4IcOJeQRcNNw+7p5ZA5AQAAAAD/////qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqoNAAAAAP////8CAIYOcAAAAAAWABQ1l7nn13RubTwqRQU2BnVV5WlXBWAxMbUAAAAAF6kUkiuXUjfWFgTp6nl/gf9+8zIWR6KHAAAAAAAAAAAA"
-	psbt1, err := NewPsbt([]byte(imported), true)
+	psbt1, err := NewFromRawBytes(bytes.NewReader([]byte(imported)), true)
 	if err != nil {
 		t.Fatalf("Failed to parse PSBT: %v", err)
 	}
@@ -877,7 +933,7 @@ func TestImportFromCore2(t *testing.T) {
 	fakevalSerialized := binary.LittleEndian.Uint64(fakeTxOutSerialized[:8])
 	fakeScriptPubKey := fakeTxOutSerialized[9:]
 	txFund2Out := wire.NewTxOut(int64(fakevalSerialized), fakeScriptPubKey)
-	psbt2, err := NewPsbt([]byte(expectedPsbtPartialB64), true)
+	psbt2, err := NewFromRawBytes(bytes.NewReader([]byte(expectedPsbtPartialB64)), true)
 	if err != nil {
 		t.Fatalf("Failed to load partial PSBT: %v", err)
 	}
@@ -984,14 +1040,22 @@ func TestImportFromCore2(t *testing.T) {
 	if uoutput2.WitnessScript == nil {
 		t.Fatalf("PSBT should contain outwitnessscript but it does not.")
 	}
+	var tx bytes.Buffer
 	networkSerializedTx, err := Extract(psbt2)
+	if err != nil {
+		t.Fatalf("unable to extract tx: %v", err)
+	}
+	if err := networkSerializedTx.Serialize(&tx); err != nil {
+		t.Fatalf("unable to encode tx: %v", err)
+	}
 	expectedSerializedTx, err := hex.DecodeString("020000000001024c5343eae283940d9d44b99cc73e3dc728c3821c38979045c34dc3eee9e5903901000000171600147aed39420a8b7ab98a83791327ccb70819d1fbe2ffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0d000000232200208c2353173743b595dfb4a07b72ba8e42e3797da74e87fe7d9d7497e3b2028903ffffffff0200860e70000000001600143597b9e7d7746e6d3c2a450536067555e5695705603131b50000000017a914922b975237d61604e9ea797f81ff7ef3321647a287024730440220546d182d00e45ef659c329dce6197dc19e0abc795e2c9279873f5a887998b273022044143113fc3475d04fc8d5113e0bbcb42d80514a9f1a2247e9b2a7878e20d449012102bb3ce35af26f4c826eab3e5fc263ef56871b26686a8a995599b7ee65766131040400473044022062eb7a556107a7c73f45ac4ab5a1dddf6f7075fb1275969a7f383efff784bcb202200c05dbb7470dbf2f08557dd356c7325c1ed30913e996cd3840945db12228da5f01473044022065f45ba5998b59a27ffe1a7bed016af1f1f90d54b3aa8f7450aa5f56a25103bd02207f724703ad1edb96680b284b56d4ffcb88f7fb759eabbe08aa30f29b851383d20147522103089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc21023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e7352ae00000000")
 	if err != nil {
 		t.Fatalf("Failed to decode hex: %v", err)
 	}
-	if !bytes.Equal(expectedSerializedTx, networkSerializedTx) {
-		t.Fatalf("Failed to create correct network serialized transaction: "+
-			"%x\n", networkSerializedTx)
+	if !bytes.Equal(expectedSerializedTx, tx.Bytes()) {
+		t.Fatalf("Failed to create correct network serialized "+
+			"transaction: expected %x, got %x",
+			expectedSerializedTx, tx.Bytes())
 	}
 }
 
@@ -999,7 +1063,7 @@ func TestMaybeFinalizeAll(t *testing.T) {
 	// The following data is from a 3rd transaction from Core,
 	// using 3 inputs, all p2wkh.
 	imported := "cHNidP8BAKQCAAAAAzJyXH13IqBFvvZ7y1VSgUgkMvMoPgP5CfFNqsjQexKQAQAAAAD/////fMdLydu5bsoiHN9cFSaBL0Qnq2KLSKx0RA4b938CAgQAAAAAAP/////yKNgfsDAHr/zFz8R9k8EFI26allfg9DdE8Gzj6tGlegEAAAAA/////wHw9E0OAAAAABYAFDnPCRduiEWmmSc1j30SJ8k9u7PHAAAAAAAAAAAA"
-	psbt1, err := NewPsbt([]byte(imported), true)
+	psbt1, err := NewFromRawBytes(bytes.NewReader([]byte(imported)), true)
 	if err != nil {
 		t.Fatalf("Failed to parse PSBT: %v", err)
 	}
@@ -1091,7 +1155,7 @@ func TestFromUnsigned(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
-	psbt1, err := NewPsbtFromUnsignedTx(tx)
+	psbt1, err := NewFromUnsignedTx(tx)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
@@ -1105,7 +1169,7 @@ func TestFromUnsigned(t *testing.T) {
 	if encoded != fromCoreB64 {
 		t.Fatalf("Got incorrect b64: %v", encoded)
 	}
-	_, err = NewPsbt([]byte(fromCoreB64), true)
+	_, err = NewFromRawBytes(bytes.NewReader([]byte(fromCoreB64)), true)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
@@ -1144,7 +1208,7 @@ func TestNonWitnessToWitness(t *testing.T) {
 	}
 
 	// import the PSBT
-	psbt1, err := NewPsbt([]byte(psbt1B64), true)
+	psbt1, err := NewFromRawBytes(bytes.NewReader([]byte(psbt1B64)), true)
 	if err != nil {
 		t.Fatalf("Failed to create PSBT: %v", err)
 	}
@@ -1212,11 +1276,15 @@ func TestNonWitnessToWitness(t *testing.T) {
 	}
 
 	expectedNetworkSer, _ := hex.DecodeString("020000000001047b4131763e497f79c627665893faec24d0d3614f5296cd848c4da6501d96f93e0100000017160014b3773ea5d2c881d62aa9b86a1e66f5eadcff73a8ffffffff1b69ade1b5fbfac562d6375bb816b943fc6c25d83314281d1c7499ab77b02ba600000000171600142412be29368c0260cb841eecd9b59d7e01174aa1ffffffffcdadb65bec6cdf020e243aa1560086d769bab8700bed546bfe79e70822fd4a820100000000ffffffffbdecf627e9ae012b95a38d1f5ae0a4db3797afadfa6cf65c64c7b1355609e9bf010000006a4730440220290abcaacbd759c4f989762a9ee3468a9231788aab8f50bf65955d8597d8dd3602204d7e394f4419dc5392c6edba6945837458dd750a030ac67a746231903a8eb7db01210388025f50bb51c0469421ed13381f22f9d46a070ec2837e055c49c5876f0d0968ffffffff01f02672530000000017a914430b040b99f36dd63999e38dd99436b6199e1603870247304402201fb93318eda2b247c2bd7d1d8240eecdfa89eed02eeca51939eca44e4275498902201bf841164ad612f3e390f482cf8bcfddce138b37ee590f544f9295766d6b3584012102de369fd7d30c7deac19f4067e65c572463aaa2a99f4af9c772542f079809de710247304402205676877e6162ce40a49ee5a74443cdc1e7915637c42da7b872c2ec2298fd371b02203c1d4a05b1e2a7a588d9ec9b8d4892d2cd59bebe0e777483477a0ec692ebbe6d012102534f23cb88a048b649672967263bd7570312d5d31d066fa7b303970010a77b2b02473044022065d0a349709b8d8043cfd644cf6c196c1f601a22e1b3fdfbf8c0cc2a80fe2f1702207c87d36b666a8862e81ec5df288707f517d2f35ea1548feb82019de2c8de90f701210257d88eaf1e79b72ea0a33ae89b57dae95ea68499bdc6770257e010ab899f0abb0000000000")
-	serializedtx, err := Extract(psbt1)
+	tx, err := Extract(psbt1)
 	if err != nil {
 		t.Fatalf("Failed to extract: %v", err)
 	}
-	if !bytes.Equal(expectedNetworkSer, serializedtx) {
-		t.Fatalf("Expected serialized transaction was not produced: %x", serializedtx)
+	var b bytes.Buffer
+	if err := tx.Serialize(&b); err != nil {
+		t.Fatalf("unable to encode tx: %v", err)
+	}
+	if !bytes.Equal(expectedNetworkSer, b.Bytes()) {
+		t.Fatalf("Expected serialized transaction was not produced: %x", b.Bytes())
 	}
 }

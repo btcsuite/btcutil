@@ -21,14 +21,12 @@ import (
 	"github.com/btcsuite/btcd/wire"
 )
 
-// BIP-174 aka PSBT defined values
-
-// Key types are currently encoded with single bytes
-type psbtKeyType = uint8
-
+// psbtMagicLength is the length of the magic bytes used to signal the start of
+// a serialized PSBT packet.
 const psbtMagicLength = 5
 
 var (
+	// psbtMagic is the separator
 	psbtMagic = [psbtMagicLength]byte{0x70,
 		0x73, 0x62, 0x74, 0xff, // = "psbt" + 0xff sep
 	}
@@ -38,30 +36,6 @@ var (
 // that could be passed in a NonWitnessUtxo field. This is definitely
 //less than 4M.
 const MaxPsbtValueLength = 4000000
-
-// The below are the known key types as per the BIP.
-// Unknown types may be accepted but will not be processed.
-const (
-
-	// Global known key types
-	PsbtGlobalUnsignedTx psbtKeyType = 0
-
-	// TxIn section known key types
-	PsbtInNonWitnessUtxo     psbtKeyType = 0
-	PsbtInWitnessUtxo        psbtKeyType = 1
-	PsbtInPartialSig         psbtKeyType = 2
-	PsbtInSighashType        psbtKeyType = 3
-	PsbtInRedeemScript       psbtKeyType = 4
-	PsbtInWitnessScript      psbtKeyType = 5
-	PsbtInBip32Derivation    psbtKeyType = 6
-	PsbtInFinalScriptSig     psbtKeyType = 7
-	PsbtInFinalScriptWitness psbtKeyType = 8
-
-	// TxOut section known key types
-	PsbtOutRedeemScript    psbtKeyType = 0
-	PsbtOutWitnessScript   psbtKeyType = 1
-	PsbtOutBip32Derivation psbtKeyType = 2
-)
 
 var (
 
@@ -130,187 +104,9 @@ var (
 	ErrUnsupportedScriptType = errors.New("Unsupported script type")
 )
 
-func serializeKVpair(w io.Writer, key []byte, value []byte) error {
-	err := wire.WriteVarBytes(w, 0, key)
-	if err != nil {
-		return err
-	}
-	err = wire.WriteVarBytes(w, 0, value)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func serializeKVPairWithType(w io.Writer, kt psbtKeyType, keydata []byte,
-	value []byte) error {
-	if keydata == nil {
-		keydata = []byte{}
-	}
-	serializedKey := append([]byte{byte(kt)}, keydata...)
-	return serializeKVpair(w, serializedKey, value)
-}
-
-// getKey retrieves a single key - both the key type and the keydata
-// (if present) from the stream and returns the key type as an integer,
-// or -1 if the key was of zero length, which is used to indicate the
-// presence of a separator byte which indicates the end of a given key-
-// value pair list, and the keydata as a byte slice or nil if none is
-// present.
-func getKey(r io.Reader) (int, []byte, error) {
-
-	// For the key, we read the varint separately, instead of
-	// using the available ReadVarBytes, because we have a specific
-	// treatment of 0x00 here:
-	count, err := wire.ReadVarInt(r, 0)
-	if err != nil {
-		return -1, nil, ErrInvalidPsbtFormat
-	}
-	if count == 0 {
-		// separator indicates end of key-value pair list
-		return -1, nil, nil
-	}
-
-	// read count bytes, this is the key (including type and any data)
-	var keyintanddata = make([]byte, count)
-	if _, err := io.ReadFull(r, keyintanddata[:]); err != nil {
-		return -1, nil, err
-	}
-
-	keyType := int(string(keyintanddata)[0])
-	// Note that the second return value will usually be empty,
-	// since most keys contain no more than the key type byte.
-	if len(keyintanddata) == 1 {
-		return keyType, nil, nil
-	}
-	return keyType, keyintanddata[1:], nil
-
-}
-
-// readTxOut is a limited version of wire.readTxOut, because
-// the latter is not exported.
-func readTxOut(txout []byte) (*wire.TxOut, error) {
-	if len(txout) < 10 {
-		return nil, ErrInvalidPsbtFormat
-	}
-	valueSer := binary.LittleEndian.Uint64(txout[:8])
-	scriptPubKey := txout[9:]
-	return wire.NewTxOut(int64(valueSer), scriptPubKey), nil
-}
-
-// PartialSig encapsulate a (BTC public key, ECDSA signature)
-// pair, note that the fields are stored as byte slices, not
-// btcec.PublicKey or btcec.Signature (because manipulations will
-// be with the former not the latter, here); compliance with consensus
-// serialization is enforced with .checkValid()
-type PartialSig struct {
-	PubKey    []byte
-	Signature []byte
-}
-
-// PartialSigSorter implements sort.Interface.
-type PartialSigSorter []*PartialSig
-
-func (s PartialSigSorter) Len() int { return len(s) }
-
-func (s PartialSigSorter) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-
-func (s PartialSigSorter) Less(i, j int) bool {
-	return bytes.Compare(s[i].PubKey, s[j].PubKey) < 0
-}
-
-// validatePubkey checks if pubKey is *any* valid
-// pubKey serialization in a Bitcoin context (compressed/uncomp. OK)
-func validatePubkey(pubKey []byte) bool {
-	_, err := btcec.ParsePubKey(pubKey, btcec.S256())
-	if err != nil {
-		return false
-	}
-	return true
-}
-
-// validateSignature checks that the passed byte slice is a valid
-// DER-encoded ECDSA signature, including the sighash flag.
-// It does *not* of course validate the signature against any message
-// or public key.
-func validateSignature(sig []byte) bool {
-	_, err := btcec.ParseDERSignature(sig, btcec.S256())
-	if err != nil {
-		return false
-	}
-	return true
-}
-
-// See above notes (PartialSig, validatePubkey, validateSignature).
-// NOTE update for Schnorr will be needed here if/when that activates.
-func (ps *PartialSig) checkValid() bool {
-	return validatePubkey(ps.PubKey) && validateSignature(ps.Signature)
-}
-
-// Bip32Derivation encapsulates the data for the input and output
-// Bip32Derivation key-value fields.
-type Bip32Derivation struct {
-	PubKey               []byte
-	MasterKeyFingerprint uint32
-	Bip32Path            []uint32
-}
-
-// checkValid ensures that the PubKey in the Bip32Derivation
-// struct is valid.
-func (pb *Bip32Derivation) checkValid() bool {
-	return validatePubkey(pb.PubKey)
-}
-
-// Bip32Sorter implements sort.Interface.
-type Bip32Sorter []*Bip32Derivation
-
-func (s Bip32Sorter) Len() int { return len(s) }
-
-func (s Bip32Sorter) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-
-func (s Bip32Sorter) Less(i, j int) bool {
-	return bytes.Compare(s[i].PubKey, s[j].PubKey) < 0
-}
-
-// readBip32Derivation deserializes a byte slice containing
-// chunks of 4 byte little endian encodings of uint32 values,
-// the first of which is the masterkeyfingerprint and the remainder
-// of which are the derivation path.
-func readBip32Derivation(path []byte) (uint32, []uint32, error) {
-
-	if len(path)%4 != 0 || len(path)/4-1 < 1 {
-		return 0, nil, ErrInvalidPsbtFormat
-	}
-	masterKeyInt := binary.LittleEndian.Uint32(path[:4])
-	paths := make([]uint32, 0)
-	for i := 4; i < len(path); i += 4 {
-		paths = append(paths, binary.LittleEndian.Uint32(path[i:i+4]))
-	}
-	return masterKeyInt, paths, nil
-}
-
-// SerializeBIP32Derivation takes a master key fingerprint
-// as defined in BIP32, along with a path specified as a list
-// of uint32 values, and returns a bytestring specifying the derivation
-// in the format required by BIP174:
-// // master key fingerprint (4) || child index (4) || child index (4) || ...
-func SerializeBIP32Derivation(masterKeyFingerprint uint32,
-	bip32Path []uint32) []byte {
-	derivationPath := make([]byte, 0, 4+4*len(bip32Path))
-	var masterKeyBytes [4]byte
-	binary.LittleEndian.PutUint32(masterKeyBytes[:], masterKeyFingerprint)
-	derivationPath = append(derivationPath, masterKeyBytes[:]...)
-	for _, path := range bip32Path {
-		var pathbytes [4]byte
-		binary.LittleEndian.PutUint32(pathbytes[:], path)
-		derivationPath = append(derivationPath, pathbytes[:]...)
-	}
-	return derivationPath
-}
-
-// Unknown is a struct encapsulating a key-value pair for which
-// the key type is unknown by this package; these fields are allowed
-// in both the 'Global' and the 'Input' section of a PSBT.
+// Unknown is a struct encapsulating a key-value pair for which the key type is
+// unknown by this package; these fields are allowed in both the 'Global' and
+// the 'Input' section of a PSBT.
 type Unknown struct {
 	Key   []byte
 	Value []byte

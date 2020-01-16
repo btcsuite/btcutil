@@ -10,14 +10,10 @@ package psbt
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/binary"
 	"errors"
 
 	"io"
-	"sort"
 
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 )
 
@@ -112,38 +108,42 @@ type Unknown struct {
 	Value []byte
 }
 
-
-
-
-}
-
-// Psbt is a set of 1 + N + M key-value pair lists, 1 global,
-// defining the unsigned transaction structure with N inputs and M outputs.
-// These key-value pairs can contain scripts, signatures,
-// key derivations and other transaction-defining data.
-type Psbt struct {
+// Packet is the actual psbt repreesntation. It is a is a set of 1 + N + M
+// key-value pair lists, 1 global, defining the unsigned transaction structure
+// with N inputs and M outputs.  These key-value pairs can contain scripts,
+// signatures, key derivations and other transaction-defining data.
+type Packet struct {
+	// UnsignedTx is the decoded unsigned transaction for this PSBT.
 	UnsignedTx *wire.MsgTx // Deserialization of unsigned tx
-	Inputs     []PInput
-	Outputs    []POutput
-	Unknowns   []Unknown // Data of unknown type at global scope
+
+	// Inputs contains all the information needed to properly sign this
+	// target input within the above transaction.
+	Inputs []PInput
+
+	// Outputs contains all information required to spend any outputs
+	// produced by this PSBT.
+	Outputs []POutput
+
+	// Unknowns are the set of custom types (global only) within this PSBT.
+	Unknowns []Unknown
 }
 
-// validateUnsignedTx returns true if the transaction is unsigned.
-// Note that more basic sanity requirements,
-// such as the presence of inputs and outputs, is implicitly
-// checked in the call to MsgTx.Deserialize()
+// validateUnsignedTx returns true if the transaction is unsigned.  Note that
+// more basic sanity requirements, such as the presence of inputs and outputs,
+// is implicitly checked in the call to MsgTx.Deserialize().
 func validateUnsignedTX(tx *wire.MsgTx) bool {
 	for _, tin := range tx.TxIn {
 		if len(tin.SignatureScript) != 0 || len(tin.Witness) != 0 {
 			return false
 		}
 	}
+
 	return true
 }
 
-// NewPsbtFromUnsignedTx creates a new Psbt struct, without
-// any signatures (i.e. only the global section is non-empty).
-func NewPsbtFromUnsignedTx(tx *wire.MsgTx) (*Psbt, error) {
+// NewFromUnsignedTx creates a new Psbt struct, without any signatures (i.e.
+// only the global section is non-empty) using the passed unsigned transaction.
+func NewFromUnsignedTx(tx *wire.MsgTx) (*Packet, error) {
 
 	if !validateUnsignedTX(tx) {
 		return nil, ErrInvalidRawTxSigned
@@ -153,7 +153,7 @@ func NewPsbtFromUnsignedTx(tx *wire.MsgTx) (*Psbt, error) {
 	outSlice := make([]POutput, len(tx.TxOut))
 	unknownSlice := make([]Unknown, 0)
 
-	retPsbt := Psbt{
+	retPsbt := Packet{
 		UnsignedTx: tx,
 		Inputs:     inSlice,
 		Outputs:    outSlice,
@@ -163,52 +163,52 @@ func NewPsbtFromUnsignedTx(tx *wire.MsgTx) (*Psbt, error) {
 	return &retPsbt, nil
 }
 
-// NewPsbt returns a new instance of a Psbt struct created
-// by reading from a byte slice. If the format is invalid, an error
-// is returned. If the argument b64 is true, the passed byte slice
-// is decoded from base64 encoding before processing.
-// NOTE To create a Psbt from one's own data, rather than reading
-// in a serialization from a counterparty, one should use a psbt.Creator.
-func NewPsbt(psbtBytes []byte, b64 bool) (*Psbt, error) {
-	var err error
+// NewFromRawBytes returns a new instance of a Packet struct created by reading
+// from a byte slice. If the format is invalid, an error is returned. If the
+// argument b64 is true, the passed byte slice is decoded from base64 encoding
+// before processing.
+//
+// NOTE: To create a Packet from one's own data, rather than reading in a
+// serialization from a counterparty, one should use a psbt.New.
+func NewFromRawBytes(r io.Reader, b64 bool) (*Packet, error) {
+
+	// If the PSBT is encoded in bas64, then we'll create a new wrapper
+	// reader that'll allow us to incrementally decode the contents of the
+	// io.Reader.
 	if b64 {
-		decoded := make([]byte, base64.StdEncoding.DecodedLen(len(psbtBytes)))
-		_, err = base64.StdEncoding.Decode(decoded, psbtBytes)
-		if err != nil {
-			return nil, err
-		}
-		psbtBytes = decoded
+		based64EncodedReader := r
+		r = base64.NewDecoder(base64.StdEncoding, based64EncodedReader)
 	}
-	r := bytes.NewReader(psbtBytes)
-	// The Psbt struct does not store the fixed magic bytes,
-	// but they must be present or the serialization must
-	// be explicitly rejected.
+
+	// The Packet struct does not store the fixed magic bytes, but they
+	// must be present or the serialization must be explicitly rejected.
 	var magic [5]byte
-	if _, err = io.ReadFull(r, magic[:]); err != nil {
+	if _, err := io.ReadFull(r, magic[:]); err != nil {
 		return nil, err
 	}
 	if magic != psbtMagic {
 		return nil, ErrInvalidMagicBytes
 	}
 
-	// Next we parse the GLOBAL section.
-	// There is currently only 1 known key type, UnsignedTx.
-	// We insist this exists first; unknowns are allowed, but
-	// only after.
+	// Next we parse the GLOBAL section.  There is currently only 1 known
+	// key type, UnsignedTx.  We insist this exists first; unknowns are
+	// allowed, but only after.
 	keyint, keydata, err := getKey(r)
 	if err != nil {
 		return nil, err
 	}
-	if uint8(keyint) != PsbtGlobalUnsignedTx || keydata != nil {
+	if GlobalType(keyint) != UnsignedTxType || keydata != nil {
 		return nil, ErrInvalidPsbtFormat
 	}
-	value, err := wire.ReadVarBytes(r, 0, MaxPsbtValueLength,
-		"PSBT value")
+
+	// Now that we've verified the global type is present, we'll decode it
+	// into a proper unsigned transaction, and validate it.
+	value, err := wire.ReadVarBytes(
+		r, 0, MaxPsbtValueLength, "PSBT value",
+	)
 	if err != nil {
 		return nil, err
 	}
-
-	// Attempt to deserialize the unsigned transaction.
 	msgTx := wire.NewMsgTx(2)
 	err = msgTx.Deserialize(bytes.NewReader(value))
 	if err != nil {
@@ -218,8 +218,9 @@ func NewPsbt(psbtBytes []byte, b64 bool) (*Psbt, error) {
 		return nil, ErrInvalidRawTxSigned
 	}
 
-	// parse any unknowns that may be present, break at separator
-	unknownSlice := make([]Unknown, 0)
+	// Next we parse any unknowns that may be present, making sure that we
+	// break at the separator.
+	var unknownSlice []Unknown
 	for {
 		keyint, keydata, err := getKey(r)
 		if err != nil {
@@ -228,13 +229,17 @@ func NewPsbt(psbtBytes []byte, b64 bool) (*Psbt, error) {
 		if keyint == -1 {
 			break
 		}
-		value, err := wire.ReadVarBytes(r, 0, MaxPsbtValueLength,
-			"PSBT value")
+
+		value, err := wire.ReadVarBytes(
+			r, 0, MaxPsbtValueLength, "PSBT value",
+		)
 		if err != nil {
 			return nil, err
 		}
+
 		keyintanddata := []byte{byte(keyint)}
 		keyintanddata = append(keyintanddata, keydata...)
+
 		newUnknown := Unknown{
 			Key:   keyintanddata,
 			Value: value,
@@ -242,40 +247,40 @@ func NewPsbt(psbtBytes []byte, b64 bool) (*Psbt, error) {
 		unknownSlice = append(unknownSlice, newUnknown)
 	}
 
-	// Next we parse the INPUT section
+	// Next we parse the INPUT section.
 	inSlice := make([]PInput, len(msgTx.TxIn))
-
 	for i := range msgTx.TxIn {
 		input := PInput{}
 		err = input.deserialize(r)
 		if err != nil {
 			return nil, err
 		}
+
 		inSlice[i] = input
 	}
 
-	//Next we parse the OUTPUT section
+	// Next we parse the OUTPUT section.
 	outSlice := make([]POutput, len(msgTx.TxOut))
-
 	for i := range msgTx.TxOut {
 		output := POutput{}
 		err = output.deserialize(r)
 		if err != nil {
 			return nil, err
 		}
+
 		outSlice[i] = output
 	}
 
-	// Populate the new Psbt object
-	newPsbt := Psbt{
+	// Populate the new Packet object
+	newPsbt := Packet{
 		UnsignedTx: msgTx,
 		Inputs:     inSlice,
 		Outputs:    outSlice,
 		Unknowns:   unknownSlice,
 	}
-	// Extended sanity checking is applied here
-	// to make sure the externally-passed Psbt follows
-	// all the rules.
+
+	// Extended sanity checking is applied here to make sure the
+	// externally-passed Packet follows all the rules.
 	if err = newPsbt.SanityCheck(); err != nil {
 		return nil, err
 	}
@@ -283,66 +288,82 @@ func NewPsbt(psbtBytes []byte, b64 bool) (*Psbt, error) {
 	return &newPsbt, nil
 }
 
-// Serialize creates a binary serialization of the referenced
-// Psbt struct with lexicographical ordering (by key) of the subsections
-func (p *Psbt) Serialize() ([]byte, error) {
+// Serialize creates a binary serialization of the referenced Packet struct
+// with lexicographical ordering (by key) of the subsections.
+func (p *Packet) Serialize(w io.Writer) error {
 
-	serPsbt := []byte{}
-	serPsbt = append(serPsbt, psbtMagic[:]...)
+	// First we write out the precise set of magic bytes that identify a
+	// valid PSBT transaction.
+	if _, err := w.Write(psbtMagic[:]); err != nil {
+		return err
+	}
 
-	// Create serialization of unsignedtx
-	serializedTx := bytes.NewBuffer(make([]byte, 0,
-		p.UnsignedTx.SerializeSize()))
+	// Next we prep to write out the unsigned transaction by first
+	// serializing it into an intermediate buffer.
+	serializedTx := bytes.NewBuffer(
+		make([]byte, 0, p.UnsignedTx.SerializeSize()),
+	)
 	if err := p.UnsignedTx.Serialize(serializedTx); err != nil {
-		return nil, err
+		return err
 	}
-	var buf bytes.Buffer
-	err := serializeKVPairWithType(&buf, PsbtGlobalUnsignedTx,
-		nil, serializedTx.Bytes())
+
+	// Now that we have the serialized transaction, we'll write it out to
+	// the proper global type.
+	err := serializeKVPairWithType(
+		w, uint8(UnsignedTxType), nil, serializedTx.Bytes(),
+	)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	serPsbt = append(serPsbt, buf.Bytes()...)
-	serPsbt = append(serPsbt, 0x00)
+
+	// With that our global section is done, so we'll write out the
+	// separator.
+	separator := []byte{0x00}
+	if _, err := w.Write(separator); err != nil {
+		return err
+	}
 
 	for _, pInput := range p.Inputs {
-		var buf bytes.Buffer
-		err := pInput.serialize(&buf)
+		err := pInput.serialize(w)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		serPsbt = append(serPsbt, buf.Bytes()...)
-		serPsbt = append(serPsbt, 0x00)
+
+		if _, err := w.Write(separator); err != nil {
+			return err
+		}
 	}
 
 	for _, pOutput := range p.Outputs {
-		var buf bytes.Buffer
-		err := pOutput.serialize(&buf)
+		err := pOutput.serialize(w)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		serPsbt = append(serPsbt, buf.Bytes()...)
-		serPsbt = append(serPsbt, 0x00)
+
+		if _, err := w.Write(separator); err != nil {
+			return err
+		}
 	}
 
-	return serPsbt, nil
+	return nil
 }
 
 // B64Encode returns the base64 encoding of the serialization of
 // the current PSBT, or an error if the encoding fails.
-func (p *Psbt) B64Encode() (string, error) {
-	raw, err := p.Serialize()
-	if err != nil {
+func (p *Packet) B64Encode() (string, error) {
+	var b bytes.Buffer
+	if err := p.Serialize(&b); err != nil {
 		return "", err
 	}
-	return base64.StdEncoding.EncodeToString(raw), nil
+
+	return base64.StdEncoding.EncodeToString(b.Bytes()), nil
 }
 
 // IsComplete returns true only if all of the inputs are
 // finalized; this is particularly important in that it decides
 // whether the final extraction to a network serialized signed
 // transaction will be possible.
-func (p *Psbt) IsComplete() bool {
+func (p *Packet) IsComplete() bool {
 	for i := 0; i < len(p.UnsignedTx.TxIn); i++ {
 		if !isFinalized(p, i) {
 			return false
@@ -353,7 +374,7 @@ func (p *Psbt) IsComplete() bool {
 
 // SanityCheck checks conditions on a PSBT to ensure that it obeys the
 // rules of BIP174, and returns true if so, false if not.
-func (p *Psbt) SanityCheck() error {
+func (p *Packet) SanityCheck() error {
 
 	if !validateUnsignedTX(p.UnsignedTx) {
 		return ErrInvalidRawTxSigned

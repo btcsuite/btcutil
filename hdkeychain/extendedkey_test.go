@@ -1068,3 +1068,19 @@ func TestMaximumDepth(t *testing.T) {
 		t.Fatal("Child: deriving 256th key should not succeed")
 	}
 }
+
+func TestChildKeyLength(t *testing.T) {
+	privKey, err := NewKeyFromString("xprv9vhBHcF6BPgSHd77KXuoceEzCb71WPcHdKt6cBuYAaW71YgTXunVUXSaviDbbtYAgoEMtCwbUF8AdveEGz72Jktz8tCTjuAqumLyw7VszRC")
+	if err != nil {
+		t.Fatalf("NewMaster: unexpected error: %v", err)
+	}
+
+	child, err := privKey.Child(HardenedKeyStart + 60)
+	if err != nil {
+		t.Fatalf("Child: unexpected error: %v", err)
+	}
+
+	if len(child.key) < 32 {
+		t.Fatalf("Child lenght of key %d should be greater than value 32", len(child.key))
+	}
+}

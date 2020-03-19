@@ -1081,6 +1081,6 @@ func TestChildKeyLength(t *testing.T) {
 	}
 
 	if len(child.key) < 32 {
-		t.Fatalf("Child lenght of key %d should be greater than value 32", len(child.key))
+		t.Fatalf("Child length of key %d should be greater than value 32", len(child.key))
 	}
 }

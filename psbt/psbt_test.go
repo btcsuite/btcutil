@@ -1288,3 +1288,32 @@ func TestNonWitnessToWitness(t *testing.T) {
 		t.Fatalf("Expected serialized transaction was not produced: %x", b.Bytes())
 	}
 }
+
+// TestEmptyInputSerialization tests the special serialization case for a wire
+// transaction that has no inputs.
+func TestEmptyInputSerialization(t *testing.T) {
+	// Create and serialize a new, empty PSBT. The wire package will assume
+	// it's a non-witness transaction, as there are no inputs.
+	psbt, err := New(nil, nil, 2, 0, nil)
+	if err != nil {
+		t.Fatalf("failed to create empty PSBT: %v", err)
+	}
+	var buf bytes.Buffer
+	err = psbt.Serialize(&buf)
+	if err != nil {
+		t.Fatalf("failed to serialize empty PSBT: %v", err)
+	}
+
+	// Try to deserialize the empty transaction again. The wire package will
+	// assume it's a witness transaction because of the special case where
+	// there are no inputs. This assumption is wrong and the first attempt
+	// will fail. But a workaround should try again to deserialize the TX
+	// with the non-witness format.
+	psbt2, err := NewFromRawBytes(&buf, false)
+	if err != nil {
+		t.Fatalf("failed to deserialize empty PSBT: %v", err)
+	}
+	if len(psbt2.UnsignedTx.TxIn) > 0 || len(psbt2.UnsignedTx.TxOut) > 0 {
+		t.Fatalf("deserialized transaction not empty")
+	}
+}

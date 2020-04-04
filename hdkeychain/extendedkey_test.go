@@ -26,6 +26,7 @@ func TestBIP0032Vectors(t *testing.T) {
 	testVec1MasterHex := "000102030405060708090a0b0c0d0e0f"
 	testVec2MasterHex := "fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542"
 	testVec3MasterHex := "4b381541583be4423346c643850da4b320e46a87ae3d2a4e6da11eba819cd4acba45d239319ac14f863b8d5ab5a0d0c64d2e8a1e7d1457df2e5a3c51c73235be"
+	testVec3aMasterHex := "57fb1e450b8afb95c62afbcd49e4100d6790e0822b8905608679180ac34ca0bd45bf7ccc6c5f5218236d0eb93afc78bd117b9f02a6b7df258ea182dfaef5aad7"
 	hkStart := uint32(0x80000000)
 
 	tests := []struct {
@@ -151,6 +152,14 @@ func TestBIP0032Vectors(t *testing.T) {
 			path:     []uint32{hkStart},
 			wantPub:  "xpub68NZiKmJWnxxS6aaHmn81bvJeTESw724CRDs6HbuccFQN9Ku14VQrADWgqbhhTHBaohPX4CjNLf9fq9MYo6oDaPPLPxSb7gwQN3ih19Zm4Y",
 			wantPriv: "xprv9uPDJpEQgRQfDcW7BkF7eTya6RPxXeJCqCJGHuCJ4GiRVLzkTXBAJMu2qaMWPrS7AANYqdq6vcBcBUdJCVVFceUvJFjaPdGZ2y9WACViL4L",
+			net:      &chaincfg.MainNetParams,
+		},
+		{
+			name:     "test vector 3 chain m/44H/60H/0H",
+			master:   testVec3aMasterHex,
+			path:     []uint32{hkStart + 44, hkStart + 60, hkStart},
+			wantPub:  "xpub6CpsfWjghR6XdCB8yDq7jQRpRKEDP2LT3ZRUgURF9g5xevB7YoTpogkFRqq5nQtVSN8YCMZo2CD8u4zCaxRv85ctCWmzEi9gQ5DBhBFaTNo",
+			wantPriv: "xprv9yqXG1Cns3YEQi6fsCJ7NGV5sHPiyZcbgLVst61dbLYyn7qy1G9aFtRmaYp481ounqnVf9Go2ymQ4gmxZLEwYSRhU868aDk4ZxzGvqHJVhe",
 			net:      &chaincfg.MainNetParams,
 		},
 
@@ -1066,21 +1075,5 @@ func TestMaximumDepth(t *testing.T) {
 	}
 	if noKey != nil {
 		t.Fatal("Child: deriving 256th key should not succeed")
-	}
-}
-
-func TestChildKeyLength(t *testing.T) {
-	privKey, err := NewKeyFromString("xprv9vhBHcF6BPgSHd77KXuoceEzCb71WPcHdKt6cBuYAaW71YgTXunVUXSaviDbbtYAgoEMtCwbUF8AdveEGz72Jktz8tCTjuAqumLyw7VszRC")
-	if err != nil {
-		t.Fatalf("NewMaster: unexpected error: %v", err)
-	}
-
-	child, err := privKey.Child(HardenedKeyStart + 60)
-	if err != nil {
-		t.Fatalf("Child: unexpected error: %v", err)
-	}
-
-	if len(child.key) < 32 {
-		t.Fatalf("Child length of key %d should be greater than value 32", len(child.key))
 	}
 }

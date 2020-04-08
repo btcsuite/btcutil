@@ -141,6 +141,12 @@ func (pi *PInput) deserialize(r io.Reader) error {
 				return ErrInvalidKeydata
 			}
 
+			// Bounds check on value here since the sighash type must be a
+			// 32-bit unsigned integer.
+			if len(value) != 4 {
+				return ErrInvalidKeydata
+			}
+
 			shtype := txscript.SigHashType(
 				binary.LittleEndian.Uint32(value),
 			)

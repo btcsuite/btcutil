@@ -33,6 +33,10 @@ var (
 //less than 4M.
 const MaxPsbtValueLength = 4000000
 
+// MaxPsbtKeyLength is the length of the largest key that we'll successfully
+// deserialize from the wire. Anything more will return ErrInvalidKeydata.
+const MaxPsbtKeyLength = 10000
+
 var (
 
 	// ErrInvalidPsbtFormat is a generic error for any situation in which a

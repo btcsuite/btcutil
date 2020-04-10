@@ -206,7 +206,7 @@ func (k *ExtendedKey) ParentFingerprint() uint32 {
 // index does not derive to a usable child.  The ErrInvalidChild error will be
 // returned if this should occur, and the caller is expected to ignore the
 // invalid child and simply increment to the next index.
-func (k *ExtendedKey) Child(i uint32) (*ExtendedKey, error) {
+func (k *ExtendedKey) Child(i uint32, fixLeadingZeroBug ...bool) (*ExtendedKey, error) {
 	// Prevent derivation of children beyond the max allowed depth.
 	if k.depth == maxUint8 {
 		return nil, ErrDeriveBeyondMaxDepth
@@ -296,7 +296,7 @@ func (k *ExtendedKey) Child(i uint32) (*ExtendedKey, error) {
 		ilNum.Mod(ilNum, btcec.S256().N)
 		childKey = ilNum.Bytes()
 		// Correction a key-length with leading zero
-		if len(childKey) < 32 {
+		if len(childKey) < 32 && len(fixLeadingZeroBug) == 1 && fixLeadingZeroBug[0] == true {
 			extra := make([]byte, 32-len(childKey))
 			childKey = append(extra, childKey...)
 		}

@@ -233,7 +233,7 @@ tests:
 
 		for _, childNum := range test.path {
 			var err error
-			extKey, err = extKey.Child(childNum)
+			extKey, err = extKey.Child(childNum, true)
 			if err != nil {
 				t.Errorf("err: %v", err)
 				continue tests

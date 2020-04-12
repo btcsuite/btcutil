@@ -296,7 +296,7 @@ func (k *ExtendedKey) Child(i uint32, fixLeadingZeroBug ...bool) (*ExtendedKey, 
 		ilNum.Mod(ilNum, btcec.S256().N)
 		childKey = ilNum.Bytes()
 		// Correction a key-length with leading zero
-		if len(childKey) < 32 && len(fixLeadingZeroBug) == 1 && fixLeadingZeroBug[0] == true {
+		if len(childKey) < 32 && len(fixLeadingZeroBug) > 0 && fixLeadingZeroBug[0] == true {
 			extra := make([]byte, 32-len(childKey))
 			childKey = append(extra, childKey...)
 		}

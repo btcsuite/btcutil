@@ -206,6 +206,10 @@ func (k *ExtendedKey) ParentFingerprint() uint32 {
 // index does not derive to a usable child.  The ErrInvalidChild error will be
 // returned if this should occur, and the caller is expected to ignore the
 // invalid child and simply increment to the next index.
+//
+// Use the 2nd parameter to fix the bug with leading zeros. This change was made
+// as an optional parameter in order to maintain backward compatibility and avoid
+// losing wallets created before fixing this bug.
 func (k *ExtendedKey) Child(i uint32, fixLeadingZeroBug ...bool) (*ExtendedKey, error) {
 	// Prevent derivation of children beyond the max allowed depth.
 	if k.depth == maxUint8 {

@@ -71,7 +71,7 @@ func Example_defaultWalletLayout() {
 
 	// Derive the extended key for account 0.  This gives the path:
 	//   m/0H
-	acct0, err := masterKey.Child(hdkeychain.HardenedKeyStart + 0)
+	acct0, err := masterKey.Child(hdkeychain.HardenedKeyStart+0, true)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -80,7 +80,7 @@ func Example_defaultWalletLayout() {
 	// Derive the extended key for the account 0 external chain.  This
 	// gives the path:
 	//   m/0H/0
-	acct0Ext, err := acct0.Child(0)
+	acct0Ext, err := acct0.Child(0, true)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -89,7 +89,7 @@ func Example_defaultWalletLayout() {
 	// Derive the extended key for the account 0 internal chain.  This gives
 	// the path:
 	//   m/0H/1
-	acct0Int, err := acct0.Child(1)
+	acct0Int, err := acct0.Child(1, true)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -101,7 +101,7 @@ func Example_defaultWalletLayout() {
 	// Derive the 10th extended key for the account 0 external chain.  This
 	// gives the path:
 	//   m/0H/0/10
-	acct0Ext10, err := acct0Ext.Child(10)
+	acct0Ext10, err := acct0Ext.Child(10, true)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -110,7 +110,7 @@ func Example_defaultWalletLayout() {
 	// Derive the 1st extended key for the account 0 internal chain.  This
 	// gives the path:
 	//   m/0H/1/0
-	acct0Int0, err := acct0Int.Child(0)
+	acct0Int0, err := acct0Int.Child(0, true)
 	if err != nil {
 		fmt.Println(err)
 		return

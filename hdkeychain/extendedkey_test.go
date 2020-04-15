@@ -390,7 +390,7 @@ tests:
 
 		for _, childNum := range test.path {
 			var err error
-			extKey, err = extKey.Child(childNum)
+			extKey, err = extKey.Child(childNum, true)
 			if err != nil {
 				t.Errorf("err: %v", err)
 				continue tests
@@ -509,7 +509,7 @@ tests:
 
 		for _, childNum := range test.path {
 			var err error
-			extKey, err = extKey.Child(childNum)
+			extKey, err = extKey.Child(childNum, true)
 			if err != nil {
 				t.Errorf("err: %v", err)
 				continue tests
@@ -839,7 +839,7 @@ func TestErrors(t *testing.T) {
 	}
 
 	// Deriving a hardened child extended key should fail from a public key.
-	_, err = pubKey.Child(HardenedKeyStart)
+	_, err = pubKey.Child(HardenedKeyStart, true)
 	if err != ErrDeriveHardFromPublic {
 		t.Fatalf("Child: mismatched error -- got: %v, want: %v",
 			err, ErrDeriveHardFromPublic)
@@ -1061,14 +1061,14 @@ func TestMaximumDepth(t *testing.T) {
 			t.Fatalf("extendedkey depth %d should match expected value %d",
 				extKey.Depth(), i)
 		}
-		newKey, err := extKey.Child(1)
+		newKey, err := extKey.Child(1, true)
 		if err != nil {
 			t.Fatalf("Child: unexpected error: %v", err)
 		}
 		extKey = newKey
 	}
 
-	noKey, err := extKey.Child(1)
+	noKey, err := extKey.Child(1, true)
 	if err != ErrDeriveBeyondMaxDepth {
 		t.Fatalf("Child: mismatched error: want %v, got %v",
 			ErrDeriveBeyondMaxDepth, err)

@@ -215,7 +215,7 @@ func serializeKVPairWithType(w io.Writer, kt uint8, keydata []byte,
 	}
 
 	// The final key to be written is: {type} || {keyData}
-	serializedKey := append([]byte{byte(kt)}, keydata...)
+	serializedKey := append([]byte{kt}, keydata...)
 	return serializeKVpair(w, serializedKey, value)
 }
 

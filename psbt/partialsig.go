@@ -31,10 +31,7 @@ func (s PartialSigSorter) Less(i, j int) bool {
 // Bitcoin context (compressed/uncomp. OK).
 func validatePubkey(pubKey []byte) bool {
 	_, err := btcec.ParsePubKey(pubKey, btcec.S256())
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 // validateSignature checks that the passed byte slice is a valid DER-encoded
@@ -42,10 +39,7 @@ func validatePubkey(pubKey []byte) bool {
 // validate the signature against any message or public key.
 func validateSignature(sig []byte) bool {
 	_, err := btcec.ParseDERSignature(sig, btcec.S256())
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 // checkValid checks that both the pbukey and sig are valid. See the methods

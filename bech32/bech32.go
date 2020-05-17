@@ -15,11 +15,11 @@ var gen = []int{0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3}
 
 // Decode decodes a bech32 encoded string, returning the human-readable
 // part and the data part excluding the checksum.
-func Decode(bech string) (string, []byte, error) {
+func Decode(bech string, limit int) (string, []byte, error) {
 	// The maximum allowed length for a bech32 string is 90. It must also
 	// be at least 8 characters, since it needs a non-empty HRP, a
 	// separator, and a 6 character checksum.
-	if len(bech) < 8 || len(bech) > 90 {
+	if len(bech) < 8 || len(bech) > limit {
 		return "", nil, fmt.Errorf("invalid bech32 string length %d",
 			len(bech))
 	}

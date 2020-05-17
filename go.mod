@@ -1,4 +1,4 @@
-module github.com/enigmampc/btcutil
+module github.com/btcsuite/btcutil
 
 go 1.13
 

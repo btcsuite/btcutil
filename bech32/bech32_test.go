@@ -21,18 +21,18 @@ func TestBech32(t *testing.T) {
 		{"abcdef1qpzry9x8gf2tvdw0s3jn54khce6mua7lmqqqxw", true},
 		{"11qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqc8247j", true},
 		{"split1checkupstagehandshakeupstreamerranterredcaperred2y9e3w", true},
-		{"split1checkupstagehandshakeupstreamerranterredcaperred2y9e2w", false},                                // invalid checksum
-		{"s lit1checkupstagehandshakeupstreamerranterredcaperredp8hs2p", false},                                // invalid character (space) in hrp
-		{"spl" + string(127) + "t1checkupstagehandshakeupstreamerranterredcaperred2y9e3w", false},              // invalid character (DEL) in hrp
-		{"split1cheo2y9e2w", false},                                                                            // invalid character (o) in data part
-		{"split1a2y9w", false},                                                                                 // too short data part
+		{"split1checkupstagehandshakeupstreamerranterredcaperred2y9e2w", false},                   // invalid checksum
+		{"s lit1checkupstagehandshakeupstreamerranterredcaperredp8hs2p", false},                   // invalid character (space) in hrp
+		{"spl" + string(127) + "t1checkupstagehandshakeupstreamerranterredcaperred2y9e3w", false}, // invalid character (DEL) in hrp
+		{"split1cheo2y9e2w", false}, // invalid character (o) in data part
+		{"split1a2y9w", false},      // too short data part
 		{"1checkupstagehandshakeupstreamerranterredcaperred2y9e3w", false},                                     // empty hrp
 		{"11qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqc8247j", false}, // too long
 	}
 
 	for _, test := range tests {
 		str := test.str
-		hrp, decoded, err := bech32.Decode(str)
+		hrp, decoded, err := bech32.Decode(str, 90)
 		if !test.valid {
 			// Invalid string decoding should result in error.
 			if err == nil {
@@ -61,7 +61,7 @@ func TestBech32(t *testing.T) {
 		// Flip a bit in the string an make sure it is caught.
 		pos := strings.LastIndexAny(str, "1")
 		flipped := str[:pos+1] + string((str[pos+1] ^ 1)) + str[pos+2:]
-		_, _, err = bech32.Decode(flipped)
+		_, _, err = bech32.Decode(flipped, 90)
 		if err == nil {
 			t.Error("expected decoding to fail")
 		}

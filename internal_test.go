@@ -100,7 +100,7 @@ func TstAddressSAddr(addr string) []byte {
 // TstAddressSegwitSAddr returns the expected witness program bytes for
 // bech32 encoded P2WPKH and P2WSH bitcoin addresses.
 func TstAddressSegwitSAddr(addr string) []byte {
-	_, data, err := bech32.Decode(addr)
+	_, data, err := bech32.Decode(addr, 90)
 	if err != nil {
 		return []byte{}
 	}

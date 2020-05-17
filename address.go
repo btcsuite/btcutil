@@ -210,7 +210,7 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, error) {
 // returns the witness version and witness program byte representation.
 func decodeSegWitAddress(address string) (byte, []byte, error) {
 	// Decode the bech32 encoded address.
-	_, data, err := bech32.Decode(address)
+	_, data, err := bech32.Decode(address, 90)
 	if err != nil {
 		return 0, nil, err
 	}

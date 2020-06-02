@@ -5,7 +5,7 @@
 package base58
 
 import (
-	"github.com/mr-tron/base58/base58"
+	"github.com/mr-tron/base58"
 )
 
 var Encode = base58.Encode

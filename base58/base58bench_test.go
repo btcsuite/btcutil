@@ -11,7 +11,33 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 )
 
-func BenchmarkBase58Encode(b *testing.B) {
+// https://www.wolframalpha.com/input/?i=ceil%28+1+%2B+%28+160%2F8+%2B+4+%29+*+log%28256%29+%2F+log%2858%29+%29
+const maxBtcAddrLen = 34
+
+func BenchmarkBase58EncodeAddr(b *testing.B) {
+	b.StopTimer()
+	data := bytes.Repeat([]byte{0xff}, maxBtcAddrLen)
+	b.SetBytes(int64(len(data)))
+	b.StartTimer()
+
+	for i := 0; i < b.N; i++ {
+		base58.Encode(data)
+	}
+}
+
+func BenchmarkBase58DecodeAddr(b *testing.B) {
+	b.StopTimer()
+	data := bytes.Repeat([]byte{0xff}, maxBtcAddrLen)
+	encoded := base58.Encode(data)
+	b.SetBytes(int64(len(encoded)))
+	b.StartTimer()
+
+	for i := 0; i < b.N; i++ {
+		base58.Decode(encoded)
+	}
+}
+
+func BenchmarkBase58Encode5k(b *testing.B) {
 	b.StopTimer()
 	data := bytes.Repeat([]byte{0xff}, 5000)
 	b.SetBytes(int64(len(data)))
@@ -22,7 +48,7 @@ func BenchmarkBase58Encode(b *testing.B) {
 	}
 }
 
-func BenchmarkBase58Decode(b *testing.B) {
+func BenchmarkBase58Decode5k(b *testing.B) {
 	b.StopTimer()
 	data := bytes.Repeat([]byte{0xff}, 5000)
 	encoded := base58.Encode(data)

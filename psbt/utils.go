@@ -15,10 +15,10 @@ import (
 	"github.com/btcsuite/btcd/wire"
 )
 
-// writeTxWitness is a A utility function due to non-exported witness
+// WriteTxWitness is a utility function due to non-exported witness
 // serialization (writeTxWitness encodes the bitcoin protocol encoding for a
 // transaction input's witness into w).
-func writeTxWitness(w io.Writer, wit [][]byte) error {
+func WriteTxWitness(w io.Writer, wit [][]byte) error {
 	if err := wire.WriteVarInt(w, 0, uint64(len(wit))); err != nil {
 		return err
 	}
@@ -39,7 +39,7 @@ func writePKHWitness(sig []byte, pub []byte) ([]byte, error) {
 		witnessItems = [][]byte{sig, pub}
 	)
 
-	if err := writeTxWitness(&buf, witnessItems); err != nil {
+	if err := WriteTxWitness(&buf, witnessItems); err != nil {
 		return nil, err
 	}
 
@@ -173,7 +173,7 @@ func getMultisigScriptWitness(witnessScript []byte, pubKeys [][]byte,
 	// Now that we have the full witness stack, we'll serialize it in the
 	// expected format, and return the final bytes.
 	var buf bytes.Buffer
-	if err = writeTxWitness(&buf, witnessElements); err != nil {
+	if err = WriteTxWitness(&buf, witnessElements); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil

@@ -179,6 +179,12 @@ func (k *ExtendedKey) Depth() uint8 {
 	return k.depth
 }
 
+// Version returns the extended key's hardened derivation version. This can be
+// used to identify the extended key's type.
+func (k *ExtendedKey) Version() []byte {
+	return k.version
+}
+
 // ParentFingerprint returns a fingerprint of the parent extended key from which
 // this one was derived.
 func (k *ExtendedKey) ParentFingerprint() uint32 {
@@ -327,6 +333,11 @@ func (k *ExtendedKey) Child(i uint32) (*ExtendedKey, error) {
 	parentFP := btcutil.Hash160(k.pubKeyBytes())[:4]
 	return NewExtendedKey(k.version, childKey, childChainCode, parentFP,
 		k.depth+1, i, isPrivate), nil
+}
+
+// ChildIndex returns the child index used to derive the extended key.
+func (k *ExtendedKey) ChildIndex() uint32 {
+	return k.childNum
 }
 
 // Neuter returns a new extended public key from this extended private key.  The

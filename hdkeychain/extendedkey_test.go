@@ -623,10 +623,10 @@ func TestExtendedKeyAPI(t *testing.T) {
 			continue
 		}
 
-		childNum := key.ChildNum()
-		if childNum != test.childNum {
-			t.Errorf("ChildNum #%d (%s): want %d, got %d", i,
-				test.name, childNum, test.childNum)
+		childIndex := key.ChildIndex()
+		if childIndex != test.childNum {
+			t.Errorf("ChildIndex #%d (%s): want %d, got %d", i,
+				test.name, test.childNum, childIndex)
 			continue
 		}
 

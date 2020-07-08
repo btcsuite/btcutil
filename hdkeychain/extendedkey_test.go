@@ -619,7 +619,7 @@ func TestExtendedKeyAPI(t *testing.T) {
 		chainCode := key.ChainCode()
 		if !bytes.Equal(chainCode, test.chainCode) {
 			t.Errorf("ChainCode #%d (%s): want %v, got %v", i,
-				test.name, chainCode, test.chainCode)
+				test.name, test.chainCode, chainCode)
 			continue
 		}
 

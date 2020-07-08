@@ -13,25 +13,32 @@ import (
 	"testing"
 
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"golang.org/x/crypto/ripemd160"
 )
 
 type CustomParamStruct struct {
+	Net              wire.BitcoinNet
 	PubKeyHashAddrID byte
 	ScriptHashAddrID byte
+	Bech32HRPSegwit  string
 }
 
 var CustomParams = CustomParamStruct{
-	PubKeyHashAddrID: 0x30, // starts with L
-	ScriptHashAddrID: 0x32, // starts with M
+	Net:              0xdbb6c0fb, // litecoin mainnet HD version bytes
+	PubKeyHashAddrID: 0x30,       // starts with L
+	ScriptHashAddrID: 0x32,       // starts with M
+	Bech32HRPSegwit:  "ltc",      // starts with ltc
 }
 
 // We use this function to be able to test functionality in DecodeAddress for
 // defaultNet addresses
 func applyCustomParams(params chaincfg.Params, customParams CustomParamStruct) chaincfg.Params {
+	params.Net = customParams.Net
 	params.PubKeyHashAddrID = customParams.PubKeyHashAddrID
 	params.ScriptHashAddrID = customParams.ScriptHashAddrID
+	params.Bech32HRPSegwit = customParams.Bech32HRPSegwit
 	return params
 }
 
@@ -628,6 +635,26 @@ func TestAddresses(t *testing.T) {
 			},
 			net: &chaincfg.TestNet3Params,
 		},
+		{
+			name:    "segwit litecoin mainnet p2wpkh v0",
+			addr:    "LTC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KGMN4N9",
+			encoded: "ltc1qw508d6qejxtdg4y5r3zarvary0c5xw7kgmn4n9",
+			valid:   true,
+			result: btcutil.TstAddressWitnessPubKeyHash(
+				0,
+				[20]byte{
+					0x75, 0x1e, 0x76, 0xe8, 0x19, 0x91, 0x96, 0xd4, 0x54, 0x94,
+					0x1c, 0x45, 0xd1, 0xb3, 0xa3, 0x23, 0xf1, 0x43, 0x3b, 0xd6},
+				CustomParams.Bech32HRPSegwit,
+			),
+			f: func() (btcutil.Address, error) {
+				pkHash := []byte{
+					0x75, 0x1e, 0x76, 0xe8, 0x19, 0x91, 0x96, 0xd4, 0x54, 0x94,
+					0x1c, 0x45, 0xd1, 0xb3, 0xa3, 0x23, 0xf1, 0x43, 0x3b, 0xd6}
+				return btcutil.NewAddressWitnessPubKeyHash(pkHash, &customParams)
+			},
+			net: &customParams,
+		},
 		// Unsupported witness versions (version 0 only supported at this point)
 		{
 			name:  "segwit mainnet witness v1",
@@ -702,6 +729,10 @@ func TestAddresses(t *testing.T) {
 			valid: false,
 			net:   &chaincfg.TestNet3Params,
 		},
+	}
+
+	if err := chaincfg.Register(&customParams); err != nil {
+		panic(err)
 	}
 
 	for _, test := range tests {

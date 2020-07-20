@@ -161,6 +161,9 @@ func TestReadInvalidPsbt(t *testing.T) {
 }
 
 func TestSanityCheck(t *testing.T) {
+	// TODO(guggero): Remove when checks for segwit v1 are implemented.
+	t.Skip("Skipping PSBT sanity checks for segwit v0.")
+
 	// Test strategy:
 	// 1. Create an invalid PSBT from a serialization
 	// Then ensure that the sanity check fails.

@@ -14,6 +14,7 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 	"github.com/davecgh/go-spew/spew"
 )
 
@@ -1337,5 +1338,111 @@ func TestEmptyInputSerialization(t *testing.T) {
 	}
 	if len(psbt2.UnsignedTx.TxIn) > 0 || len(psbt2.UnsignedTx.TxOut) > 0 {
 		t.Fatalf("deserialized transaction not empty")
+	}
+}
+
+// TestWitnessForNonWitnessUtxo makes sure that a packet that only has a non-
+// witness UTXO set can still be signed correctly by adding witness data. This
+// is to make sure that PSBTs following the CVE-2020-14199 bugfix are not
+// rejected. See https://github.com/bitcoin/bitcoin/pull/19215.
+func TestWitnessForNonWitnessUtxo(t *testing.T) {
+	// Our witness UTXO is index 1 of this raw transaction from the test
+	// vectors.
+	prevTxRaw, _ := hex.DecodeString("0200000000010158e87a21b56daf0c23be8e7070456c336f7cbaa5c8757924f545887bb2abdd7501000000171600145f275f436b09a8cc9a2eb2a2f528485c68a56323feffffff02d8231f1b0100000017a914aed962d6654f9a2b36608eb9d64d2b260db4f1118700c2eb0b0000000017a914b7f5faf40e3d40a5a459b1db3535f2b72fa921e88702483045022100a22edcc6e5bc511af4cc4ae0de0fcd75c7e04d8c1c3a8aa9d820ed4b967384ec02200642963597b9b1bc22c75e9f3e117284a962188bf5e8a74c895089046a20ad770121035509a48eb623e10aace8bfd0212fdb8a8e5af3c94b0b133b95e114cab89e4f7965000000")
+	prevTx := wire.NewMsgTx(2)
+	err := prevTx.Deserialize(bytes.NewReader(prevTxRaw))
+	if err != nil {
+		t.Fatalf("failed to deserialize previous TX: %v", err)
+	}
+
+	// First create a packet that contains one input and one output.
+	outPkScript, _ := hex.DecodeString(CUTestHexData["scriptPubkey1"])
+	packet := &Packet{
+		UnsignedTx: &wire.MsgTx{
+			Version:  2,
+			LockTime: 0,
+			TxIn: []*wire.TxIn{{
+				PreviousOutPoint: wire.OutPoint{
+					Hash:  prevTx.TxHash(),
+					Index: 1,
+				},
+			}},
+			TxOut: []*wire.TxOut{{
+				PkScript: outPkScript,
+				Value:    1.9 * btcutil.SatoshiPerBitcoin,
+			}},
+		},
+		Inputs:  []PInput{{}},
+		Outputs: []POutput{{}},
+	}
+
+	// Create an updater for the packet. This also performs a sanity check.
+	updater, err := NewUpdater(packet)
+	if err != nil {
+		t.Fatalf("failed to sanity check raw packet: %v", err)
+	}
+
+	// Now add our witness UTXO to the input. But because hardware wallets
+	// that are patched against CVE-2020-14199 require the full non-witness
+	// UTXO to be set for all inputs, we do what Core does and add the full
+	// transaction in the NonWitnessUtxo instead of just the outpoint in
+	// WitnessUtxo.
+	err = updater.AddInNonWitnessUtxo(prevTx, 0)
+	if err != nil {
+		t.Fatalf("failed to update non-witness UTXO: %v", err)
+	}
+
+	// Then add the redeem scripts and witness scripts.
+	redeemScript, _ := hex.DecodeString(CUTestHexData["Input2RedeemScript"])
+	err = updater.AddInRedeemScript(redeemScript, 0)
+	if err != nil {
+		t.Fatalf("failed to update redeem script: %v", err)
+	}
+	witnessScript, _ := hex.DecodeString(CUTestHexData["Input2WitnessScript"])
+	err = updater.AddInWitnessScript(witnessScript, 0)
+	if err != nil {
+		t.Fatalf("failed to update redeem script: %v", err)
+	}
+
+	// Add the first of the two partial signatures.
+	sig1, _ := hex.DecodeString("3044022062eb7a556107a7c73f45ac4ab5a1dddf6f7075fb1275969a7f383efff784bcb202200c05dbb7470dbf2f08557dd356c7325c1ed30913e996cd3840945db12228da5f01")
+	pub1, _ := hex.DecodeString("03089dc10c7ac6db54f91329af617333db388cead0c231f723379d1b99030b02dc")
+	res, err := updater.Sign(0, sig1, pub1, nil, nil)
+	if err != nil {
+		t.Fatalf("failed to sign with pubkey 1: %v", err)
+	}
+	if res != SignSuccesful {
+		t.Fatalf("signing was not successful, got result %v", res)
+	}
+
+	// Check that the finalization procedure fails here due to not
+	// meeting the multisig policy
+	success, err := MaybeFinalize(packet, 0)
+	if success {
+		t.Fatalf("Incorrectly succeeded in finalizing without sigs")
+	}
+	if err != ErrUnsupportedScriptType {
+		t.Fatalf("Got unexpected error type: %v", err)
+	}
+
+	// Add the second partial signature.
+	sig2, _ := hex.DecodeString("3044022065f45ba5998b59a27ffe1a7bed016af1f1f90d54b3aa8f7450aa5f56a25103bd02207f724703ad1edb96680b284b56d4ffcb88f7fb759eabbe08aa30f29b851383d201")
+	pub2, _ := hex.DecodeString("023add904f3d6dcf59ddb906b0dee23529b7ffb9ed50e5e86151926860221f0e73")
+	res, err = updater.Sign(0, sig2, pub2, nil, nil)
+	if err != nil {
+		t.Fatalf("failed to sign with pubkey 2: %v", err)
+	}
+	if res != SignSuccesful {
+		t.Fatalf("signing was not successful, got result %v", res)
+	}
+
+	// Finally make sure we can finalize the packet and extract the raw TX.
+	err = MaybeFinalizeAll(packet)
+	if err != nil {
+		t.Fatalf("error finalizing PSBT: %v", err)
+	}
+	_, err = Extract(packet)
+	if err != nil {
+		t.Fatalf("unable to extract funding TX: %v", err)
 	}
 }

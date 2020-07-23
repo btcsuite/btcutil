@@ -30,8 +30,8 @@ const (
 	// to a master node.
 	RecommendedSeedLen = 32 // 256 bits
 
-	// HardenedKeyStart is the index at which a hardended key starts.  Each
-	// extended key has 2^31 normal child keys and 2^31 hardned child keys.
+	// HardenedKeyStart is the index at which a hardened key starts.  Each
+	// extended key has 2^31 normal child keys and 2^31 hardened child keys.
 	// Thus the range for normal child keys is [0, 2^31 - 1] and the range
 	// for hardened child keys is [2^31, 2^32 - 1].
 	HardenedKeyStart = 0x80000000 // 2^31
@@ -179,10 +179,23 @@ func (k *ExtendedKey) Depth() uint8 {
 	return k.depth
 }
 
+// Version returns the extended key's hardened derivation version. This can be
+// used to identify the extended key's type.
+func (k *ExtendedKey) Version() []byte {
+	return k.version
+}
+
 // ParentFingerprint returns a fingerprint of the parent extended key from which
 // this one was derived.
 func (k *ExtendedKey) ParentFingerprint() uint32 {
 	return binary.BigEndian.Uint32(k.parentFP)
+}
+
+// ChainCode returns the chain code part of this extended key.
+//
+// It is identical for both public and private extended keys.
+func (k *ExtendedKey) ChainCode() []byte {
+	return append([]byte{}, k.chainCode...)
 }
 
 // Child returns a derived child extended key at the given index.  When this
@@ -192,7 +205,7 @@ func (k *ExtendedKey) ParentFingerprint() uint32 {
 //
 // When the index is greater to or equal than the HardenedKeyStart constant, the
 // derived extended key will be a hardened extended key.  It is only possible to
-// derive a hardended extended key from a private extended key.  Consequently,
+// derive a hardened extended key from a private extended key.  Consequently,
 // this function will return ErrDeriveHardFromPublic if a hardened child
 // extended key is requested from a public extended key.
 //
@@ -327,6 +340,14 @@ func (k *ExtendedKey) Child(i uint32) (*ExtendedKey, error) {
 	parentFP := btcutil.Hash160(k.pubKeyBytes())[:4]
 	return NewExtendedKey(k.version, childKey, childChainCode, parentFP,
 		k.depth+1, i, isPrivate), nil
+}
+
+// ChildNum returns the index at which the child extended key was derived.
+//
+// Extended keys with ChildNum value between 0 and 2^31-1 are normal child
+// keys, and those with a value between 2^31 and 2^32-1 are hardened keys.
+func (k *ExtendedKey) ChildIndex() uint32 {
+	return k.childNum
 }
 
 // Neuter returns a new extended public key from this extended private key.  The

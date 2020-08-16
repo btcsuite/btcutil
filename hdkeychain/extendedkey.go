@@ -119,7 +119,7 @@ type ExtendedKey struct {
 // NewExtendedKey returns a new instance of an extended key with the given
 // fields.  No error checking is performed here as it's only intended to be a
 // convenience method used to create a populated struct. This function should
-// only by used by applications that need to create custom ExtendedKeys. All
+// only be used by applications that need to create custom ExtendedKeys. All
 // other applications should just use NewMaster, Child, or Neuter.
 func NewExtendedKey(version, key, chainCode, parentFP []byte, depth uint8,
 	childNum uint32, isPrivate bool) *ExtendedKey {

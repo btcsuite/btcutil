@@ -142,8 +142,11 @@ func nonWitnessToWitness(p *Packet, inIndex int) error {
 	outIndex := p.UnsignedTx.TxIn[inIndex].PreviousOutPoint.Index
 	txout := p.Inputs[inIndex].NonWitnessUtxo.TxOut[outIndex]
 
-	// Remove the non-witness first, else sanity check will not pass:
-	p.Inputs[inIndex].NonWitnessUtxo = nil
+	// TODO(guggero): For segwit v1, we'll want to remove the NonWitnessUtxo
+	// from the packet. For segwit v0 it is unsafe to only rely on the
+	// witness UTXO. See https://github.com/bitcoin/bitcoin/pull/19215.
+	// p.Inputs[inIndex].NonWitnessUtxo = nil
+
 	u := Updater{
 		Upsbt: p,
 	}

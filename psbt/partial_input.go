@@ -49,19 +49,13 @@ func NewPsbtInput(nonWitnessUtxo *wire.MsgTx,
 }
 
 // IsSane returns true only if there are no conflicting values in the Psbt
-// PInput. It checks that witness and non-witness utxo entries do not both
-// exist, and that witnessScript entries are only added to witness inputs.
+// PInput. For segwit v0 no checks are currently implemented.
 func (pi *PInput) IsSane() bool {
 
-	if pi.NonWitnessUtxo != nil && pi.WitnessUtxo != nil {
-		return false
-	}
-	if pi.WitnessUtxo == nil && pi.WitnessScript != nil {
-		return false
-	}
-	if pi.WitnessUtxo == nil && pi.FinalScriptWitness != nil {
-		return false
-	}
+	// TODO(guggero): Implement sanity checks for segwit v1. For segwit v0
+	// it is unsafe to only rely on the witness UTXO so we don't check that
+	// only one is set anymore.
+	// See https://github.com/bitcoin/bitcoin/pull/19215.
 
 	return true
 }

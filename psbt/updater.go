@@ -102,6 +102,11 @@ func (p *Updater) addPartialSignature(inIndex int, sig []byte,
 		}
 	}
 
+	// Attaching signature without utxo field is not allowed.
+	if pInput.WitnessUtxo == nil && pInput.NonWitnessUtxo == nil {
+		return ErrInvalidPsbtFormat
+	}
+
 	// Next, we perform a series of additional sanity checks.
 	if pInput.NonWitnessUtxo != nil {
 		if len(p.Upsbt.UnsignedTx.TxIn) < inIndex+1 {
@@ -136,7 +141,16 @@ func (p *Updater) addPartialSignature(inIndex int, sig []byte,
 			}
 		}
 
-	} else if pInput.WitnessUtxo != nil {
+	}
+
+	// It could be that we set both the non-witness and witness UTXO fields
+	// in case it's from a wallet that patched the CVE-2020-14199
+	// vulnerability. We detect whether the input being spent is actually a
+	// witness input and then copy it over to the witness UTXO field in the
+	// signer. Run the witness checks as well, even if we might already have
+	// checked the script hash. But that should be a negligible performance
+	// penalty.
+	if pInput.WitnessUtxo != nil {
 		scriptPubKey := pInput.WitnessUtxo.PkScript
 
 		var script []byte
@@ -196,10 +210,6 @@ func (p *Updater) addPartialSignature(inIndex int, sig []byte,
 				return ErrInvalidSignatureForInput
 			}
 		}
-	} else {
-
-		// Attaching signature without utxo field is not allowed.
-		return ErrInvalidPsbtFormat
 	}
 
 	p.Upsbt.Inputs[inIndex].PartialSigs = append(

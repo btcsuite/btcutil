@@ -378,6 +378,36 @@ func (k *ExtendedKey) Neuter() (*ExtendedKey, error) {
 		k.depth, k.childNum, false), nil
 }
 
+// CloneWithVersion returns a new extended key cloned from this extended key,
+// but using the provided HD version bytes. The version must be a private HD
+// key ID for an extended private key, and a public HD key ID for an extended
+// public key.
+//
+// This method creates a new copy and therefore does not mutate the original
+// extended key instance.
+//
+// Unlike Neuter(), this does NOT convert an extended private key to an
+// extended public key. It is particularly useful for converting between
+// standard BIP0032 extended keys (serializable to xprv/xpub) and keys based
+// on the SLIP132 standard (serializable to yprv/ypub, zprv/zpub, etc.).
+//
+// References:
+//   [SLIP132]: SLIP-0132 - Registered HD version bytes for BIP-0032
+//   https://github.com/satoshilabs/slips/blob/master/slip-0132.md
+func (k *ExtendedKey) CloneWithVersion(version []byte) (*ExtendedKey, error) {
+	if len(version) != 4 {
+		// TODO: The semantically correct error to return here is
+		//  ErrInvalidHDKeyID (introduced in btcsuite/btcd#1617). Update the
+		//  error type once available in a stable btcd / chaincfg release.
+		return nil, chaincfg.ErrUnknownHDKeyID
+	}
+
+	// Initialize a new extended key instance with the same fields as the
+	// current extended private/public key and the provided HD version bytes.
+	return NewExtendedKey(version, k.key, k.chainCode, k.parentFP,
+		k.depth, k.childNum, k.isPrivate), nil
+}
+
 // ECPubKey converts the extended key to a btcec public key and returns it.
 func (k *ExtendedKey) ECPubKey() (*btcec.PublicKey, error) {
 	return btcec.ParsePubKey(k.pubKeyBytes(), btcec.S256())

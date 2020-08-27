@@ -1088,3 +1088,71 @@ func TestMaximumDepth(t *testing.T) {
 		t.Fatal("Child: deriving 256th key should not succeed")
 	}
 }
+
+// TestCloneWithVersion ensures proper conversion between standard and SLIP132
+// extended keys.
+//
+// The following tool was used for generating the tests:
+//   https://jlopp.github.io/xpub-converter
+func TestCloneWithVersion(t *testing.T) {
+	tests := []struct {
+		name    string
+		key     string
+		version []byte
+		want    string
+		wantErr error
+	}{
+		{
+			name:    "test xpub to zpub",
+			key:     "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8",
+			version: []byte{0x04, 0xb2, 0x47, 0x46},
+			want:    "zpub6jftahH18ngZxUuv6oSniLNrBCSSE1B4EEU59bwTCEt8x6aS6b2mdfLxbS4QS53g85SWWP6wexqeer516433gYpZQoJie2tcMYdJ1SYYYAL",
+		},
+		{
+			name:    "test zpub to xpub",
+			key:     "zpub6jftahH18ngZxUuv6oSniLNrBCSSE1B4EEU59bwTCEt8x6aS6b2mdfLxbS4QS53g85SWWP6wexqeer516433gYpZQoJie2tcMYdJ1SYYYAL",
+			version: []byte{0x04, 0x88, 0xb2, 0x1e},
+			want:    "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8",
+		},
+		{
+			name:    "test xprv to zprv",
+			key:     "xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi",
+			version: []byte{0x04, 0xb2, 0x43, 0x0c},
+			want:    "zprvAWgYBBk7JR8GjzqSzmunMCS7dAbwpYTCs1YUMDXqduMA5JFHZ3iX5s2UkAR6vBdcCYYa1S5o1fVLrKsrnpCQ4WpUd6aVUWP1bS2Yy5DoaKv",
+		},
+		{
+			name:    "test zprv to xprv",
+			key:     "zprvAWgYBBk7JR8GjzqSzmunMCS7dAbwpYTCs1YUMDXqduMA5JFHZ3iX5s2UkAR6vBdcCYYa1S5o1fVLrKsrnpCQ4WpUd6aVUWP1bS2Yy5DoaKv",
+			version: []byte{0x04, 0x88, 0xad, 0xe4},
+			want:    "xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHi",
+		},
+		{
+			name:    "test invalid key id",
+			key:     "zprvAWgYBBk7JR8GjzqSzmunMCS7dAbwpYTCs1YUMDXqduMA5JFHZ3iX5s2UkAR6vBdcCYYa1S5o1fVLrKsrnpCQ4WpUd6aVUWP1bS2Yy5DoaKv",
+			version: []byte{0x4B, 0x1D},
+			wantErr: chaincfg.ErrUnknownHDKeyID,
+		},
+	}
+
+	for i, test := range tests {
+		extKey, err := NewKeyFromString(test.key)
+		if err != nil {
+			panic(err) // This is never expected to fail.
+		}
+
+		got, err := extKey.CloneWithVersion(test.version)
+		if !reflect.DeepEqual(err, test.wantErr) {
+			t.Errorf("CloneWithVersion #%d (%s): unexpected error -- "+
+				"want %v, got %v", i, test.name, test.wantErr, err)
+			continue
+		}
+
+		if test.wantErr == nil {
+			if k := got.String(); k != test.want {
+				t.Errorf("CloneWithVersion #%d (%s): "+
+					"got %s, want %s", i, test.name, k, test.want)
+				continue
+			}
+		}
+	}
+}

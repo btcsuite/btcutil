@@ -1,6 +1,6 @@
 module github.com/btcsuite/btcutil
 
-go 1.13
+go 1.14
 
 require (
 	github.com/aead/siphash v1.0.1

@@ -11,25 +11,37 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 )
 
-func BenchmarkBase58Encode(b *testing.B) {
-	b.StopTimer()
-	data := bytes.Repeat([]byte{0xff}, 5000)
-	b.SetBytes(int64(len(data)))
-	b.StartTimer()
+var (
+	raw5k       = bytes.Repeat([]byte{0xff}, 5000)
+	raw100k     = bytes.Repeat([]byte{0xff}, 100*1000)
+	encoded5k   = base58.Encode(raw5k)
+	encoded100k = base58.Encode(raw100k)
+)
 
+func BenchmarkBase58Encode_5K(b *testing.B) {
+	b.SetBytes(int64(len(raw5k)))
 	for i := 0; i < b.N; i++ {
-		base58.Encode(data)
+		base58.Encode(raw5k)
 	}
 }
 
-func BenchmarkBase58Decode(b *testing.B) {
-	b.StopTimer()
-	data := bytes.Repeat([]byte{0xff}, 5000)
-	encoded := base58.Encode(data)
-	b.SetBytes(int64(len(encoded)))
-	b.StartTimer()
-
+func BenchmarkBase58Encode_100K(b *testing.B) {
+	b.SetBytes(int64(len(raw100k)))
 	for i := 0; i < b.N; i++ {
-		base58.Decode(encoded)
+		base58.Encode(raw100k)
+	}
+}
+
+func BenchmarkBase58Decode_5K(b *testing.B) {
+	b.SetBytes(int64(len(encoded5k)))
+	for i := 0; i < b.N; i++ {
+		base58.Decode(encoded5k)
+	}
+}
+
+func BenchmarkBase58Decode_100K(b *testing.B) {
+	b.SetBytes(int64(len(encoded100k)))
+	for i := 0; i < b.N; i++ {
+		base58.Decode(encoded100k)
 	}
 }

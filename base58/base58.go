@@ -10,25 +10,64 @@ import (
 
 //go:generate go run genalphabet.go
 
-var bigRadix = big.NewInt(58)
+var bigRadix = [...]*big.Int{
+	big.NewInt(0),
+	big.NewInt(58),
+	big.NewInt(58 * 58),
+	big.NewInt(58 * 58 * 58),
+	big.NewInt(58 * 58 * 58 * 58),
+	big.NewInt(58 * 58 * 58 * 58 * 58),
+	big.NewInt(58 * 58 * 58 * 58 * 58 * 58),
+	big.NewInt(58 * 58 * 58 * 58 * 58 * 58 * 58),
+	big.NewInt(58 * 58 * 58 * 58 * 58 * 58 * 58 * 58),
+	big.NewInt(58 * 58 * 58 * 58 * 58 * 58 * 58 * 58 * 58),
+	bigRadix10,
+}
+
 var bigRadix10 = big.NewInt(58 * 58 * 58 * 58 * 58 * 58 * 58 * 58 * 58 * 58) // 58^10
 var bigZero = big.NewInt(0)
 
 // Decode decodes a modified base58 string to a byte slice.
 func Decode(b string) []byte {
 	answer := big.NewInt(0)
-	j := big.NewInt(1)
-
 	scratch := new(big.Int)
-	for i := len(b) - 1; i >= 0; i-- {
-		tmp := b58[b[i]]
-		if tmp == 255 {
-			return []byte("")
+
+	// Calculating with big.Int is slow for each iteration.
+	//    x += b58[b[i]] * j
+	//    j *= 58
+	//
+	// Instead we can try to do as much calculations on int64.
+	// We can represent a 10 digit base58 number using an int64.
+	//
+	// Hence we'll try to convert 10, base58 digits at a time.
+	// The rough idea is to calculate `t`, such that:
+	//
+	//   t := b58[b[i+9]] * 58^9 ... + b58[b[i+1]] * 58^1 + b58[b[i]] * 58^0
+	//   x *= 58^10
+	//   x += t
+	//
+	// Of course, in addition, we'll need to handle boundary condition when `b` is not multiple of 58^10.
+	// In that case we'll use the bigRadix[n] lookup for the appropriate power.
+	for t := b; len(t) > 0; {
+		n := len(t)
+		if n > 10 {
+			n = 10
 		}
-		scratch.SetInt64(int64(tmp))
-		scratch.Mul(j, scratch)
+
+		total := uint64(0)
+		for _, v := range t[:n] {
+			tmp := b58[v]
+			if tmp == 255 {
+				return []byte("")
+			}
+			total = total*58 + uint64(tmp)
+		}
+
+		answer.Mul(answer, bigRadix[n])
+		scratch.SetUint64(total)
 		answer.Add(answer, scratch)
-		j.Mul(j, bigRadix)
+
+		t = t[n:]
 	}
 
 	tmpval := answer.Bytes()

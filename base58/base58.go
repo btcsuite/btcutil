@@ -25,7 +25,6 @@ var bigRadix = [...]*big.Int{
 }
 
 var bigRadix10 = big.NewInt(58 * 58 * 58 * 58 * 58 * 58 * 58 * 58 * 58 * 58) // 58^10
-var bigZero = big.NewInt(0)
 
 // Decode decodes a modified base58 string to a byte slice.
 func Decode(b string) []byte {
@@ -90,9 +89,11 @@ func Encode(b []byte) string {
 	x := new(big.Int)
 	x.SetBytes(b)
 
-	answer := make([]byte, 0, len(b)*136/100)
+	// maximum length of output is log58(2^(8*len(b))) == len(b) * 8 / log(58)
+	maxlen := int(float64(len(b))*1.365658237309761) + 1
+	answer := make([]byte, 0, maxlen)
 	mod := new(big.Int)
-	for x.Cmp(bigZero) > 0 {
+	for x.Sign() > 0 {
 		// Calculating with big.Int is slow for each iteration.
 		//    x, mod = x / 58, x % 58
 		//
@@ -103,7 +104,7 @@ func Encode(b []byte) string {
 		// We'll loop that 10 times to convert to the answer.
 
 		x.DivMod(x, bigRadix10, mod)
-		if x.Cmp(bigZero) == 0 {
+		if x.Sign() == 0 {
 			// When x = 0, we need to ensure we don't add any extra zeros.
 			m := mod.Int64()
 			for m > 0 {

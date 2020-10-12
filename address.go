@@ -171,6 +171,9 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, error) {
 	// Serialized public keys are either 65 bytes (130 hex chars) if
 	// uncompressed/hybrid or 33 bytes (66 hex chars) if compressed.
 	if len(addr) == 130 || len(addr) == 66 {
+		if defaultNet == nil {
+			return nil, errors.New("decoded address appears to be P2PK, but no network was provided")
+		}
 		serializedPubKey, err := hex.DecodeString(addr)
 		if err != nil {
 			return nil, err
@@ -186,24 +189,32 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, error) {
 		}
 		return nil, errors.New("decoded address is of unknown format")
 	}
-	switch len(decoded) {
-	case ripemd160.Size: // P2PKH or P2SH
-		isP2PKH := netID == defaultNet.PubKeyHashAddrID
-		isP2SH := netID == defaultNet.ScriptHashAddrID
-		switch hash160 := decoded; {
-		case isP2PKH && isP2SH:
-			return nil, ErrAddressCollision
-		case isP2PKH:
-			return newAddressPubKeyHash(hash160, netID)
-		case isP2SH:
-			return newAddressScriptHashFromHash(hash160, netID)
-		default:
-			return nil, ErrUnknownAddressType
-		}
 
-	default:
-		return nil, errors.New("decoded address is of unknown size")
+	if len(decoded) == ripemd160.Size {
+		return decodeLegacyAddress(decoded, netID, defaultNet)
 	}
+	return nil, errors.New("decoded address is of unknown size")
+}
+
+func decodeLegacyAddress(hash160 []byte, netID byte, defaultNet *chaincfg.Params) (Address, error) {
+	paramsToTry := []*chaincfg.Params{defaultNet}
+	if defaultNet == nil {
+		paramsToTry = []*chaincfg.Params{
+			&chaincfg.MainNetParams, &chaincfg.TestNet3Params, &chaincfg.RegressionNetParams, &chaincfg.SimNetParams}
+	}
+
+	for _, params := range paramsToTry {
+		isP2PKH := netID == params.PubKeyHashAddrID
+		isP2SH := netID == params.ScriptHashAddrID
+		if isP2PKH && isP2SH {
+			return nil, ErrAddressCollision
+		} else if isP2PKH {
+			return newAddressPubKeyHash(hash160, netID)
+		} else if isP2SH {
+			return newAddressScriptHashFromHash(hash160, netID)
+		}
+	}
+	return nil, ErrUnknownAddressType
 }
 
 // decodeSegWitAddress parses a bech32 encoded segwit address string and

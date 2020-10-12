@@ -771,6 +771,23 @@ func TestAddresses(t *testing.T) {
 				return
 			}
 
+			// Decode without a default network and compare
+			if isBitcoinNetwork(test.net) {
+				switch test.result.(type) {
+					case *btcutil.AddressPubKey:
+						// noop: AddressPubKey decoding requires a defaultNet
+					default:
+						decodedWithoutDefault, errWithoutDefault := btcutil.DecodeAddress(test.addr, nil)
+						if errWithoutDefault != nil {
+							t.Errorf("%v: decoding without a default network failed with error %v",
+								test.name, errWithoutDefault)
+						} else if decodedWithoutDefault.EncodeAddress() != decoded.EncodeAddress() {
+							t.Errorf("%v: decoding address without a default network produced %v," +
+								" which does not equal %v", test.name, decodedWithoutDefault, decoded)
+						}
+				}
+			}
+
 			// Perform type-specific calculations.
 			var saddr []byte
 			switch d := decoded.(type) {
@@ -889,4 +906,11 @@ func TestAddresses(t *testing.T) {
 			return
 		}
 	}
+}
+
+func isBitcoinNetwork(net *chaincfg.Params) bool {
+	return net == &chaincfg.MainNetParams ||
+		net == &chaincfg.TestNet3Params ||
+		net == &chaincfg.RegressionNetParams ||
+		net == &chaincfg.SimNetParams
 }

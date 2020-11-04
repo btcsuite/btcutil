@@ -39,14 +39,14 @@ create a random seed for use with the NewMaster function.
 Deriving Children
 
 Once you have created a tree root (or have deserialized an extended key as
-discussed later), the child extended keys can be derived by using the Child
-function.  The Child function supports deriving both normal (non-hardened) and
+discussed later), the child extended keys can be derived by using the Derive
+function.  The Derive function supports deriving both normal (non-hardened) and
 hardened child extended keys.  In order to derive a hardened extended key, use
 the HardenedKeyStart constant + the hardened key number as the index to the
-Child function.  This provides the ability to cascade the keys into a tree and
+Derive function.  This provides the ability to cascade the keys into a tree and
 hence generate the hierarchical deterministic key chains.
 
-Normal vs Hardened Child Extended Keys
+Normal vs Hardened Derived Extended Keys
 
 A private extended key can be used to derive both hardened and non-hardened
 (normal) child private and public extended keys.  A public extended key can only

@@ -504,6 +504,16 @@ func (k *ExtendedKey) ECPrivKey() (*btcec.PrivateKey, error) {
 	return privKey, nil
 }
 
+// Address converts the extended key to a standard bitcoin pay-to-pubkey-hash
+// address for the passed network.
+//
+// Deprecated: Address exists for historical compatibility and should not be
+// used. To generate an address use the function for the specific type of
+// address you need.
+func (k *ExtendedKey) Address(net *chaincfg.Params) (*btcutil.AddressPubKeyHash, error) {
+	return k.AddressP2PKH(net)
+}
+
 // AddressP2PKH converts the extended key to a standard bitcoin pay-to-pubkey-hash
 // address for the passed network.
 func (k *ExtendedKey) AddressP2PKH(net *chaincfg.Params) (*btcutil.AddressPubKeyHash, error) {

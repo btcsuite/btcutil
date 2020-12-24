@@ -116,24 +116,24 @@ func Example_defaultWalletLayout() {
 		return
 	}
 
-	// Get and show the address associated with the extended keys for the
+	// Get and show the P2PKH address associated with the extended keys for the
 	// main bitcoin	network.
-	acct0ExtAddr, err := acct0Ext10.Address(&chaincfg.MainNetParams)
+	acct0ExtAddr, err := acct0Ext10.AddressP2PKH(&chaincfg.MainNetParams)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	acct0IntAddr, err := acct0Int0.Address(&chaincfg.MainNetParams)
+	acct0IntAddr, err := acct0Int0.AddressP2PKH(&chaincfg.MainNetParams)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println("Account 0 External Address 10:", acct0ExtAddr)
-	fmt.Println("Account 0 Internal Address 0:", acct0IntAddr)
+	fmt.Println("Account 0 External P2PKH Address 10:", acct0ExtAddr)
+	fmt.Println("Account 0 Internal P2PKH Address 0:", acct0IntAddr)
 
 	// Output:
-	// Account 0 External Address 10: 1HVccubUT8iKTapMJ5AnNA4sLRN27xzQ4F
-	// Account 0 Internal Address 0: 1J5rebbkQaunJTUoNVREDbeB49DqMNFFXk
+	// Account 0 External P2PKH Address 10: 1HVccubUT8iKTapMJ5AnNA4sLRN27xzQ4F
+	// Account 0 Internal P2PKH Address 0: 1J5rebbkQaunJTUoNVREDbeB49DqMNFFXk
 }
 
 // This example demonstrates the audits use case in BIP0032.

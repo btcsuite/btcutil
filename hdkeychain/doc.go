@@ -24,8 +24,8 @@ with the IsPrivate function.
 Transaction Signing Keys and Payment Addresses
 
 In order to create and sign transactions, or provide others with addresses to
-send funds to, the underlying key and address material must be accessible.  This
-package provides the ECPubKey, ECPrivKey, and Address functions for this
+send funds to, the underlying key and address material must be accessible. This
+package provides the ECPubKey, ECPrivKey, and various Address functions for this
 purpose.
 
 The Master Node

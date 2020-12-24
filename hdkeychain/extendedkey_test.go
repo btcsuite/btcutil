@@ -703,12 +703,12 @@ func TestExtendedKeyAPI(t *testing.T) {
 
 		addrP2WPKH, err := key.AddressP2WPKH(&chaincfg.MainNetParams)
 		if err != nil {
-			t.Errorf("NP2WPKH address #%d (%s): unexpected error: %v", i,
+			t.Errorf("P2WPKH address #%d (%s): unexpected error: %v", i,
 				test.name, err)
 			continue
 		}
 		if addrP2WPKH.EncodeAddress() != test.addressP2WPKH {
-			t.Errorf("NP2WPKH address #%d (%s): mismatched address -- want "+
+			t.Errorf("P2WPKH address #%d (%s): mismatched address -- want "+
 				"%s, got %s", i, test.name, test.addressP2WPKH,
 				addrP2WPKH.EncodeAddress())
 			continue

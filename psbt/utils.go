@@ -301,6 +301,15 @@ func SumUtxoInputValues(packet *Packet) (int64, error) {
 			// the UTXO resides in.
 			utxOuts := in.NonWitnessUtxo.TxOut
 			txIn := packet.UnsignedTx.TxIn[idx]
+
+			// Check that utxOuts actually has enough space to
+			// contain the previous outpoint's index.
+			opIdx := txIn.PreviousOutPoint.Index
+			if opIdx >= uint32(len(utxOuts)) {
+				return 0, fmt.Errorf("input %d has malformed "+
+					"TxOut field", idx)
+			}
+
 			inputSum += utxOuts[txIn.PreviousOutPoint.Index].Value
 
 		default:

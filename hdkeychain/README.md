@@ -39,7 +39,7 @@ report.
 ## Installation and Updating
 
 ```bash
-$ go get -u github.com/btcsuite/btcutil/hdkeychain
+$ go get -u github.com/btcsuite/btcutil/v2/hdkeychain
 ```
 
 ## Examples

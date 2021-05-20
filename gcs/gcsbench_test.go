@@ -10,7 +10,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/btcsuite/btcutil/gcs"
+	"github.com/btcsuite/btcutil/v2/gcs"
 )
 
 func genRandFilterElements(numElements uint) ([][]byte, error) {

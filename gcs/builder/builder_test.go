@@ -13,9 +13,9 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
-	"github.com/btcsuite/btcutil/gcs"
-	"github.com/btcsuite/btcutil/gcs/builder"
+	"github.com/btcsuite/btcutil/v2"
+	"github.com/btcsuite/btcutil/v2/gcs"
+	"github.com/btcsuite/btcutil/v2/gcs/builder"
 )
 
 var (

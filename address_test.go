@@ -859,14 +859,6 @@ func TestAddresses(t *testing.T) {
 					test.name)
 				return
 			}
-		} else {
-			// If there is an error, make sure we can print it
-			// correctly.
-			errStr := err.Error()
-			if errStr == "" {
-				t.Errorf("%v: error was non-nil but message is"+
-					"empty: %v", test.name, err)
-			}
 		}
 
 		if !test.valid {

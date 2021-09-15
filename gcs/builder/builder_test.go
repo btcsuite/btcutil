@@ -13,9 +13,10 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
+	// XXX: btcd depends on (btcsuite/btcutil) types directly. See line 88.
 	"github.com/btcsuite/btcutil"
-	"github.com/btcsuite/btcutil/gcs"
-	"github.com/btcsuite/btcutil/gcs/builder"
+	"github.com/cosmos/btcutil/gcs"
+	"github.com/cosmos/btcutil/gcs/builder"
 )
 
 var (
@@ -84,6 +85,7 @@ func TestUseBlockHash(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Address decode failed: %s", err.Error())
 	}
+	// XXX: txscript.PayToAddrScript evaluates (btcsuite/btcutil) type, or throws.
 	addrBytes, err := txscript.PayToAddrScript(addr)
 	if err != nil {
 		t.Fatalf("Address script build failed: %s", err.Error())

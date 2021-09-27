@@ -277,7 +277,7 @@ func (k *ExtendedKey) Derive(i uint32) (*ExtendedKey, error) {
 	// data:
 	//   I = HMAC-SHA512(Key = chainCode, Data = data)
 	hmac512 := hmac.New(sha512.New, k.chainCode)
-	hmac512.Write(data)
+	_, _ = hmac512.Write(data)
 	ilr := hmac512.Sum(nil)
 
 	// Split "I" into two 32-byte sequences Il and Ir where:
@@ -380,7 +380,7 @@ func (k *ExtendedKey) DeriveNonStandard(i uint32) (*ExtendedKey, error) {
 	binary.BigEndian.PutUint32(data[keyLen:], i)
 
 	hmac512 := hmac.New(sha512.New, k.chainCode)
-	hmac512.Write(data)
+	_, _ = hmac512.Write(data)
 	ilr := hmac512.Sum(nil)
 
 	il := ilr[:len(ilr)/2]
@@ -610,7 +610,7 @@ func NewMaster(seed []byte, net *chaincfg.Params) (*ExtendedKey, error) {
 	// First take the HMAC-SHA512 of the master key and the seed data:
 	//   I = HMAC-SHA512(Key = "Bitcoin seed", Data = S)
 	hmac512 := hmac.New(sha512.New, masterKey)
-	hmac512.Write(seed)
+	_, _ = hmac512.Write(seed)
 	lr := hmac512.Sum(nil)
 
 	// Split "I" into two 32-byte sequences Il and Ir where:

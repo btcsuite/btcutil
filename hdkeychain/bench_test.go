@@ -26,7 +26,7 @@ func BenchmarkDeriveHardened(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		masterKey.Derive(hdkeychain.HardenedKeyStart)
+		_, _ = masterKey.Derive(hdkeychain.HardenedKeyStart)
 	}
 }
 
@@ -41,7 +41,7 @@ func BenchmarkDeriveNormal(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		masterKey.Derive(0)
+		_, _ = masterKey.Derive(0)
 	}
 }
 
@@ -56,7 +56,7 @@ func BenchmarkPrivToPub(b *testing.B) {
 	b.StartTimer()
 
 	for i := 0; i < b.N; i++ {
-		masterKey.Neuter()
+		_, _ = masterKey.Neuter()
 	}
 }
 
@@ -64,7 +64,7 @@ func BenchmarkPrivToPub(b *testing.B) {
 // extended key.
 func BenchmarkDeserialize(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		hdkeychain.NewKeyFromString(bip0032MasterPriv1)
+		_, _ = hdkeychain.NewKeyFromString(bip0032MasterPriv1)
 	}
 }
 

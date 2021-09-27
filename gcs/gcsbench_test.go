@@ -28,7 +28,6 @@ func genRandFilterElements(numElements uint) ([][]byte, error) {
 
 var (
 	generatedFilter *gcs.Filter
-	filterErr       error
 )
 
 // BenchmarkGCSFilterBuild benchmarks building a filter.
@@ -101,7 +100,7 @@ func BenchmarkGCSFilterMatch(b *testing.B) {
 
 	var localMatch bool
 	for i := 0; i < b.N; i++ {
-		localMatch, err = filter.Match(key, []byte("Nate"))
+		_, err = filter.Match(key, []byte("Nate"))
 		if err != nil {
 			b.Fatalf("unable to match filter: %v", err)
 		}
@@ -115,8 +114,6 @@ func BenchmarkGCSFilterMatch(b *testing.B) {
 }
 
 var (
-	randElems1, _        = genRandFilterElements(1)
-	randElems10, _       = genRandFilterElements(10)
 	randElems100, _      = genRandFilterElements(100)
 	randElems1000, _     = genRandFilterElements(1000)
 	randElems10000, _    = genRandFilterElements(10000)
@@ -164,6 +161,8 @@ var matchAnyBenchmarks = []struct {
 // BenchmarkGCSFilterMatchAny benchmarks the sort-and-zip MatchAny impl.
 func BenchmarkGCSFilterZipMatchAny(b *testing.B) {
 	for _, test := range matchAnyBenchmarks {
+		test := test
+
 		b.Run(test.name, func(b *testing.B) {
 			b.ReportAllocs()
 
@@ -188,6 +187,8 @@ func BenchmarkGCSFilterZipMatchAny(b *testing.B) {
 // BenchmarkGCSFilterMatchAny benchmarks the hash-join MatchAny impl.
 func BenchmarkGCSFilterHashMatchAny(b *testing.B) {
 	for _, test := range matchAnyBenchmarks {
+		test := test
+
 		b.Run(test.name, func(b *testing.B) {
 			b.ReportAllocs()
 
@@ -212,6 +213,8 @@ func BenchmarkGCSFilterHashMatchAny(b *testing.B) {
 // BenchmarkGCSFilterMatchAny benchmarks the hybrid MatchAny impl.
 func BenchmarkGCSFilterMatchAny(b *testing.B) {
 	for _, test := range matchAnyBenchmarks {
+		test := test
+
 		b.Run(test.name, func(b *testing.B) {
 			b.ReportAllocs()
 

@@ -91,7 +91,7 @@ type Filter struct {
 // BuildGCSFilter builds a new GCS filter with the collision probability of
 // `1/(2**P)`, key `key`, and including every `[]byte` in `data` as a member of
 // the set.
-func BuildGCSFilter(P uint8, M uint64, key [KeySize]byte, data [][]byte) (*Filter, error) {
+func BuildGCSFilter(P uint8, M uint64, key [KeySize]byte, data [][]byte) (*Filter, error) { // nolint:gocritic
 	// Some initial parameter checks: make sure we have data from which to
 	// build the filter, and make sure our parameters will fit the hash
 	// function we're using.
@@ -174,7 +174,7 @@ func BuildGCSFilter(P uint8, M uint64, key [KeySize]byte, data [][]byte) (*Filte
 
 // FromBytes deserializes a GCS filter from a known N, P, and serialized filter
 // as returned by Bytes().
-func FromBytes(N uint32, P uint8, M uint64, d []byte) (*Filter, error) {
+func FromBytes(N uint32, P uint8, M uint64, d []byte) (*Filter, error) { // nolint:gocritic
 	// Basic sanity check.
 	if P > 32 {
 		return nil, ErrPTooBig
@@ -200,7 +200,7 @@ func FromBytes(N uint32, P uint8, M uint64, d []byte) (*Filter, error) {
 
 // FromNBytes deserializes a GCS filter from a known P, and serialized N and
 // filter as returned by NBytes().
-func FromNBytes(P uint8, M uint64, d []byte) (*Filter, error) {
+func FromNBytes(P uint8, M uint64, d []byte) (*Filter, error) { // nolint:gocritic
 	buffer := bytes.NewBuffer(d)
 	N, err := wire.ReadVarInt(buffer, varIntProtoVer)
 	if err != nil {

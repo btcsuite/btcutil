@@ -655,13 +655,123 @@ func TestAddresses(t *testing.T) {
 			},
 			net: &customParams,
 		},
-		// Unsupported witness versions (version 0 only supported at this point)
+
+		// P2TR address tests.
 		{
-			name:  "segwit mainnet witness v1",
-			addr:  "bc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k7grplx",
+			name:    "segwit v1 mainnet p2tr",
+			addr:    "bc1paardr2nczq0rx5rqpfwnvpzm497zvux64y0f7wjgcs7xuuuh2nnqwr2d5c",
+			encoded: "bc1paardr2nczq0rx5rqpfwnvpzm497zvux64y0f7wjgcs7xuuuh2nnqwr2d5c",
+			valid:   true,
+			result: btcutil.TstAddressTaproot(
+				1, [32]byte{
+					0xef, 0x46, 0xd1, 0xaa, 0x78, 0x10, 0x1e, 0x33,
+					0x50, 0x60, 0x0a, 0x5d, 0x36, 0x04, 0x5b, 0xa9,
+					0x7c, 0x26, 0x70, 0xda, 0xa9, 0x1e, 0x9f, 0x3a,
+					0x48, 0xc4, 0x3c, 0x6e, 0x73, 0x97, 0x54, 0xe6,
+				}, chaincfg.MainNetParams.Bech32HRPSegwit,
+			),
+			f: func() (btcutil.Address, error) {
+				scriptHash := []byte{
+					0xef, 0x46, 0xd1, 0xaa, 0x78, 0x10, 0x1e, 0x33,
+					0x50, 0x60, 0x0a, 0x5d, 0x36, 0x04, 0x5b, 0xa9,
+					0x7c, 0x26, 0x70, 0xda, 0xa9, 0x1e, 0x9f, 0x3a,
+					0x48, 0xc4, 0x3c, 0x6e, 0x73, 0x97, 0x54, 0xe6,
+				}
+				return btcutil.NewAddressTaproot(
+					scriptHash, &chaincfg.MainNetParams,
+				)
+			},
+			net: &chaincfg.MainNetParams,
+		},
+
+		// Invalid bech32m tests. Source:
+		// https://github.com/bitcoin/bips/blob/master/bip-0350.mediawiki
+		{
+			name:  "segwit v1 invalid human-readable part",
+			addr:  "tc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq5zuyut",
 			valid: false,
 			net:   &chaincfg.MainNetParams,
 		},
+		{
+			name:  "segwit v1 mainnet bech32 instead of bech32m",
+			addr:  "bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqh2y7hd",
+			valid: false,
+			net:   &chaincfg.MainNetParams,
+		},
+		{
+			name:  "segwit v1 testnet bech32 instead of bech32m",
+			addr:  "tb1z0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqglt7rf",
+			valid: false,
+			net:   &chaincfg.TestNet3Params,
+		},
+		{
+			name:  "segwit v1 mainnet bech32 instead of bech32m upper case",
+			addr:  "BC1S0XLXVLHEMJA6C4DQV22UAPCTQUPFHLXM9H8Z3K2E72Q4K9HCZ7VQ54WELL",
+			valid: false,
+			net:   &chaincfg.MainNetParams,
+		},
+		{
+			name:  "segwit v0 mainnet bech32m instead of bech32",
+			addr:  "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kemeawh",
+			valid: false,
+			net:   &chaincfg.MainNetParams,
+		},
+		{
+			name:  "segwit v1 testnet bech32 instead of bech32m second test",
+			addr:  "tb1q0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq24jc47",
+			valid: false,
+			net:   &chaincfg.TestNet3Params,
+		},
+		{
+			name:  "segwit v1 mainnet bech32m invalid character in checksum",
+			addr:  "bc1p38j9r5y49hruaue7wxjce0updqjuyyx0kh56v8s25huc6995vvpql3jow4",
+			valid: false,
+			net:   &chaincfg.MainNetParams,
+		},
+		{
+			name:  "segwit mainnet witness v17",
+			addr:  "BC130XLXVLHEMJA6C4DQV22UAPCTQUPFHLXM9H8Z3K2E72Q4K9HCZ7VQ7ZWS8R",
+			valid: false,
+			net:   &chaincfg.MainNetParams,
+		},
+		{
+			name:  "segwit v1 mainnet bech32m invalid program length (1 byte)",
+			addr:  "bc1pw5dgrnzv",
+			valid: false,
+			net:   &chaincfg.MainNetParams,
+		},
+		{
+			name:  "segwit v1 mainnet bech32m invalid program length (41 bytes)",
+			addr:  "bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7v8n0nx0muaewav253zgeav",
+			valid: false,
+			net:   &chaincfg.MainNetParams,
+		},
+		{
+			name:  "segwit v1 testnet bech32m mixed case",
+			addr:  "tb1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq47Zagq",
+			valid: false,
+			net:   &chaincfg.TestNet3Params,
+		},
+		{
+			name:  "segwit v1 mainnet bech32m zero padding of more than 4 bits",
+			addr:  "bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7v07qwwzcrf",
+			valid: false,
+			net:   &chaincfg.MainNetParams,
+		},
+		{
+			name:  "segwit v1 mainnet bech32m non-zero padding in 8-to-5-conversion",
+			addr:  "tb1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vpggkg4j",
+			valid: false,
+			net:   &chaincfg.TestNet3Params,
+		},
+		{
+			name:  "segwit v1 mainnet bech32m empty data section",
+			addr:  "bc1gmk9yu",
+			valid: false,
+			net:   &chaincfg.MainNetParams,
+		},
+
+		// Unsupported witness versions (version 0 and 1 only supported at this point)
 		{
 			name:  "segwit mainnet witness v16",
 			addr:  "BC1SW50QA3JX3S",
@@ -788,6 +898,8 @@ func TestAddresses(t *testing.T) {
 				saddr = btcutil.TstAddressSegwitSAddr(encoded)
 			case *btcutil.AddressWitnessScriptHash:
 				saddr = btcutil.TstAddressSegwitSAddr(encoded)
+			case *btcutil.AddressTaproot:
+				saddr = btcutil.TstAddressTaprootSAddr(encoded)
 			}
 
 			// Check script address, as well as the Hash160 method for P2PKH and

@@ -64,8 +64,8 @@ func encodeAddress(hash160 []byte, netID byte) string {
 	return base58.CheckEncode(hash160[:ripemd160.Size], netID)
 }
 
-// encodeSegWitAddress creates a bech32 encoded address string representation
-// from witness version and witness program.
+// encodeSegWitAddress creates a bech32 (or bech32m for SegWit v1) encoded
+// address string representation from witness version and witness program.
 func encodeSegWitAddress(hrp string, witnessVersion byte, witnessProgram []byte) (string, error) {
 	// Group the address bytes into 5 bit groups, as this is what is used to
 	// encode each character in the address string.
@@ -79,7 +79,19 @@ func encodeSegWitAddress(hrp string, witnessVersion byte, witnessProgram []byte)
 	combined := make([]byte, len(converted)+1)
 	combined[0] = witnessVersion
 	copy(combined[1:], converted)
-	bech, err := bech32.Encode(hrp, combined)
+
+	var bech string
+	switch witnessVersion {
+	case 0:
+		bech, err = bech32.Encode(hrp, combined)
+
+	case 1:
+		bech, err = bech32.EncodeM(hrp, combined)
+
+	default:
+		return "", fmt.Errorf("unsupported witness version %d",
+			witnessVersion)
+	}
 	if err != nil {
 		return "", err
 	}
@@ -149,8 +161,9 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, error) {
 			}
 
 			// We currently only support P2WPKH and P2WSH, which is
-			// witness version 0.
-			if witnessVer != 0 {
+			// witness version 0 and P2TR which is witness version
+			// 1.
+			if witnessVer != 0 && witnessVer != 1 {
 				return nil, UnsupportedWitnessVerError(witnessVer)
 			}
 
@@ -161,6 +174,10 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, error) {
 			case 20:
 				return newAddressWitnessPubKeyHash(hrp, witnessProg)
 			case 32:
+				if witnessVer == 1 {
+					return newAddressTaproot(hrp, witnessProg)
+				}
+
 				return newAddressWitnessScriptHash(hrp, witnessProg)
 			default:
 				return nil, UnsupportedWitnessProgLenError(len(witnessProg))
@@ -210,7 +227,7 @@ func DecodeAddress(addr string, defaultNet *chaincfg.Params) (Address, error) {
 // returns the witness version and witness program byte representation.
 func decodeSegWitAddress(address string) (byte, []byte, error) {
 	// Decode the bech32 encoded address.
-	_, data, err := bech32.Decode(address)
+	_, data, bech32version, err := bech32.DecodeGeneric(address)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -244,6 +261,18 @@ func decodeSegWitAddress(address string) (byte, []byte, error) {
 	if version == 0 && len(regrouped) != 20 && len(regrouped) != 32 {
 		return 0, nil, fmt.Errorf("invalid data length for witness "+
 			"version 0: %v", len(regrouped))
+	}
+
+	// For witness version 0, the bech32 encoding must be used.
+	if version == 0 && bech32version != bech32.Version0 {
+		return 0, nil, fmt.Errorf("invalid checksum expected bech32 " +
+			"encoding for address with witness version 0")
+	}
+
+	// For witness version 1, the bech32m encoding must be used.
+	if version == 1 && bech32version != bech32.VersionM {
+		return 0, nil, fmt.Errorf("invalid checksum expected bech32m " +
+			"encoding for address with witness version 1")
 	}
 
 	return version, regrouped, nil
@@ -646,6 +675,43 @@ func newAddressWitnessScriptHash(hrp string,
 		AddressSegWit{
 			hrp:            strings.ToLower(hrp),
 			witnessVersion: 0x00,
+			witnessProgram: witnessProg,
+		},
+	}
+
+	return addr, nil
+}
+
+// AddressTaproot is an Address for a pay-to-taproot (P2TR) output. See BIP 341
+// for further details.
+type AddressTaproot struct {
+	AddressSegWit
+}
+
+// NewAddressTaproot returns a new AddressTaproot.
+func NewAddressTaproot(witnessProg []byte,
+	net *chaincfg.Params) (*AddressTaproot, error) {
+
+	return newAddressTaproot(net.Bech32HRPSegwit, witnessProg)
+}
+
+// newAddressWitnessScriptHash is an internal helper function to create an
+// AddressWitnessScriptHash with a known human-readable part, rather than
+// looking it up through its parameters.
+func newAddressTaproot(hrp string,
+	witnessProg []byte) (*AddressTaproot, error) {
+
+	// Check for valid program length for witness version 1, which is 32
+	// for P2TR.
+	if len(witnessProg) != 32 {
+		return nil, errors.New("witness program must be 32 bytes for " +
+			"p2tr")
+	}
+
+	addr := &AddressTaproot{
+		AddressSegWit{
+			hrp:            strings.ToLower(hrp),
+			witnessVersion: 0x01,
 			witnessProgram: witnessProg,
 		},
 	}

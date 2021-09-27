@@ -59,9 +59,11 @@ func TstAddressWitnessPubKeyHash(version byte, program [20]byte,
 	hrp string) *AddressWitnessPubKeyHash {
 
 	return &AddressWitnessPubKeyHash{
-		hrp:            hrp,
-		witnessVersion: version,
-		witnessProgram: program,
+		AddressSegWit{
+			hrp:            hrp,
+			witnessVersion: version,
+			witnessProgram: program[:],
+		},
 	}
 }
 
@@ -71,9 +73,11 @@ func TstAddressWitnessScriptHash(version byte, program [32]byte,
 	hrp string) *AddressWitnessScriptHash {
 
 	return &AddressWitnessScriptHash{
-		hrp:            hrp,
-		witnessVersion: version,
-		witnessProgram: program,
+		AddressSegWit{
+			hrp:            hrp,
+			witnessVersion: version,
+			witnessProgram: program[:],
+		},
 	}
 }
 

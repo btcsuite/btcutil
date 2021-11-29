@@ -64,6 +64,8 @@ func TestEncodeDecodeWIF(t *testing.T) {
 	}
 
 	for _, validCase := range validEncodeCases {
+		validCase := validCase
+
 		t.Run(validCase.name, func(t *testing.T) {
 			priv, _ := btcec.PrivKeyFromBytes(btcec.S256(), validCase.privateKey)
 			wif, err := NewWIF(priv, validCase.net, validCase.compress)
@@ -122,6 +124,8 @@ func TestEncodeDecodeWIF(t *testing.T) {
 	}
 
 	for _, invalidCase := range invalidDecodeCases {
+		invalidCase := invalidCase
+
 		t.Run(invalidCase.name, func(t *testing.T) {
 			decodedWif, err := DecodeWIF(invalidCase.wif)
 			if decodedWif != nil {

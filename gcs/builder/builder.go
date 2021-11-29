@@ -54,7 +54,7 @@ func RandomKey() ([gcs.KeySize]byte, error) {
 	}
 
 	// Copy the byte slice to a [gcs.KeySize]byte array and return it.
-	copy(key[:], randKey[:])
+	copy(key[:], randKey)
 	return key, nil
 }
 
@@ -62,7 +62,7 @@ func RandomKey() ([gcs.KeySize]byte, error) {
 // truncating the bytes of the hash to the appopriate key size.
 func DeriveKey(keyHash *chainhash.Hash) [gcs.KeySize]byte {
 	var key [gcs.KeySize]byte
-	copy(key[:], keyHash.CloneBytes()[:])
+	copy(key[:], keyHash.CloneBytes())
 	return key
 }
 
